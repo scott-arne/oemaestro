@@ -60,6 +60,8 @@ void MolConverter::Convert(const MaestroMol& maestro_mol, OEChem::OEMolBase& mol
             static_cast<unsigned int>(bond.order));
     }
 
+    mol.SetDimension(OEChem::OEGetDimensionFromCoords(mol));
+
     if (tags_ != TAG_NONE) {
         ApplyDataTags(maestro_mol, mol);
     }
@@ -134,7 +136,9 @@ void MolConverter::ApplyDataTags(const MaestroMol& maestro_mol,
 
 void MolConverter::RunPerception(OEChem::OEMolBase& mol) const {
     if (perception_ & PERCEPTION_CONNECTIVITY) {
-        OEChem::OEDetermineConnectivity(mol);
+        if (OEChem::OEGetDimensionFromCoords(mol) == 3) {
+            OEChem::OEDetermineConnectivity(mol);
+        }
     }
     if (perception_ & PERCEPTION_RINGS) {
         OEChem::OEFindRingAtomsAndBonds(mol);
