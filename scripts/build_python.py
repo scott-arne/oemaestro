@@ -95,8 +95,8 @@ def run_command(cmd, cwd=None, check=True, capture_output=False, verbose=False):
 def get_openeye_info(python_exe):
     """Get OpenEye toolkits version and library directory from Python."""
     code = """
-from openeye import libs, oechem
 import os
+from openeye import libs, oechem
 dll_dir = libs.FindOpenEyeDLLSDirectory()
 version = oechem.OEToolkitsGetRelease()
 print(f'VERSION:{version}')

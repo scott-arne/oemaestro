@@ -45,7 +45,7 @@ jobs:
           dnf install -y --allowerasing \
             git curl unzip gcc gcc-c++ cmake ninja-build \
             python3.11 python3.11-devel \
-            zlib-devel boost-devel
+            zlib-devel boost-devel cairo-devel
 
       - uses: actions/checkout@v6
 
