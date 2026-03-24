@@ -1,0 +1,52 @@
+[build-system]
+requires = ["scikit-build-core>=0.8", "swig>=4.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "oemaestro"
+version = "0.1.0"
+description = "Native Maestro format parser for OpenEye Toolkits"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["chemistry", "maestro", "schrodinger", "openeye", "cheminformatics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.10"
+dependencies = ["openeye-toolkits>=2025.2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.scikit-build]
+cmake.version = ">=3.21"
+cmake.build-type = "Release"
+build.targets = ["oemaestro_python"]
+build-dir = "build/{wheel_tag}"
+wheel.install-dir = "."
+wheel.py-api = "cp310"
+wheel.exclude = ["**.pyc", "**/__pycache__", "*.a", "CMakeFiles/**"]
+logging.level = "INFO"
+strict-config = false
+
+[tool.scikit-build.cmake.define]
+OEMAESTRO_BUILD_TESTS = "OFF"
+OEMAESTRO_BUILD_PYTHON = "ON"
+OPENEYE_USE_SHARED = "ON"
+OEMAESTRO_USE_STABLE_ABI = "ON"
+OEMAESTRO_UNIVERSAL2 = "ON"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+addopts = "-v"
