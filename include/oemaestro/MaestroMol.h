@@ -31,9 +31,9 @@ struct MaestroAtom {
 ///
 /// Stores bond connectivity and order. Indices are 0-based.
 struct MaestroBond {
-    int atom1_index;  ///< 0-based index of first atom
-    int atom2_index;  ///< 0-based index of second atom
-    int order;        ///< Bond order (1=single, 2=double, 3=triple, etc.)
+    int atom1_index = 0;  ///< 0-based index of first atom
+    int atom2_index = 0;  ///< 0-based index of second atom
+    int order = 0;        ///< Bond order (1=single, 2=double, 3=triple, etc.)
 };
 
 /// Intermediate representation for a Maestro molecule.
@@ -46,6 +46,9 @@ struct MaestroMol {
     std::vector<MaestroAtom> atoms;                 ///< Atom data
     std::vector<MaestroBond> bonds;                 ///< Bond data
     std::map<std::string, std::string> ct_properties;  ///< CT-level properties
+
+    /// Clears all data, preserving allocated capacity for reuse.
+    void Clear();
 
     /// Returns the number of atoms in the molecule.
     ///

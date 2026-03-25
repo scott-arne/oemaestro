@@ -257,6 +257,8 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
 
     reader = OEMaestroReader(str(input_path), config=config)
     ct_conf_test = _build_conf_test(conf_test)
+    if ct_conf_test is not None:
+        reader.set_conf_test(ct_conf_test)
 
     ofs = oechem.oemolostream()
     if append:
@@ -282,65 +284,24 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
             oechem.OEDeleteSDData(mol, tag)
 
     mol_count = 0
-    conf_count = 0
 
-    if ct_conf_test is not None:
-        pending = None
-        conf_count = 0
+    for mol in reader:
+        if title_field:
+            title = oechem.OEGetSDData(mol, title_field)
+            if title:
+                mol.SetTitle(title)
 
-        for ct_mol in reader:
-            if title_field:
-                title = oechem.OEGetSDData(ct_mol, title_field)
-                if title:
-                    ct_mol.SetTitle(title)
-
-            if pending is None:
-                pending = oechem.OEMol(ct_mol)
-                conf_count = 1
-            elif ct_conf_test.CompareMols(pending, ct_mol):
-                pending.NewConf(ct_mol)
-                conf_count += 1
-            else:
-                _filter_sd_tags(pending)
-                oechem.OEWriteMolecule(ofs, pending)
-                mol_count += 1
-                if not quiet:
-                    click.echo(
-                        f"  Wrote: {pending.GetTitle() or '(untitled)'} "
-                        f"({pending.NumAtoms()} atoms, {conf_count} conformer(s))",
-                    )
-                if count and mol_count >= count:
-                    pending = None
-                    break
-                pending = oechem.OEMol(ct_mol)
-                conf_count = 1
-
-        if pending is not None and (not count or mol_count < count):
-            _filter_sd_tags(pending)
-            oechem.OEWriteMolecule(ofs, pending)
-            mol_count += 1
-            if not quiet:
-                click.echo(
-                    f"  Wrote: {pending.GetTitle() or '(untitled)'} "
-                    f"({pending.NumAtoms()} atoms, {conf_count} conformer(s))",
-                )
-    else:
-        for mol in reader:
-            if title_field:
-                title = oechem.OEGetSDData(mol, title_field)
-                if title:
-                    mol.SetTitle(title)
-
-            _filter_sd_tags(mol)
-            oechem.OEWriteMolecule(ofs, mol)
-            mol_count += 1
-            if not quiet:
-                click.echo(
-                    f"  Wrote: {mol.GetTitle() or '(untitled)'} "
-                    f"({mol.NumAtoms()} atoms)",
-                )
-            if count and mol_count >= count:
-                break
+        _filter_sd_tags(mol)
+        oechem.OEWriteMolecule(ofs, mol)
+        mol_count += 1
+        if not quiet:
+            info = f"{mol.GetTitle() or '(untitled)'} ({mol.NumAtoms()} atoms"
+            if ct_conf_test is not None:
+                info += f", {mol.NumConfs()} conformer(s)"
+            info += ")"
+            click.echo(f"  Wrote: {info}")
+        if count and mol_count >= count:
+            break
 
     ofs.close()
 

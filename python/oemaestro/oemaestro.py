@@ -504,6 +504,7 @@ class MaestroAtom(object):
     insert_code = property(_oemaestro.MaestroAtom_insert_code_get, _oemaestro.MaestroAtom_insert_code_set)
     bfactor = property(_oemaestro.MaestroAtom_bfactor_get, _oemaestro.MaestroAtom_bfactor_set)
     occupancy = property(_oemaestro.MaestroAtom_occupancy_get, _oemaestro.MaestroAtom_occupancy_set)
+    is_ligand_atom = property(_oemaestro.MaestroAtom_is_ligand_atom_get, _oemaestro.MaestroAtom_is_ligand_atom_set)
     properties = property(_oemaestro.MaestroAtom_properties_get, _oemaestro.MaestroAtom_properties_set)
 
     def __repr__(self):
@@ -630,4 +631,49 @@ _oemaestro.OEMaestroReader_swigregister(OEMaestroReader)
 
 def OEReadMaestro(*args):
     return _oemaestro.OEReadMaestro(*args)
+class OEMaestroDesignUnitReader(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def Read(self, du):
+        return _oemaestro.OEMaestroDesignUnitReader_Read(self, du)
+
+    def SetLigandPredicate(self, pred):
+        return _oemaestro.OEMaestroDesignUnitReader_SetLigandPredicate(self, pred)
+
+    def SetSolventPredicate(self, pred):
+        return _oemaestro.OEMaestroDesignUnitReader_SetSolventPredicate(self, pred)
+
+    def SetCofactorPredicate(self, pred):
+        return _oemaestro.OEMaestroDesignUnitReader_SetCofactorPredicate(self, pred)
+
+    def SetPerception(self, perception):
+        return _oemaestro.OEMaestroDesignUnitReader_SetPerception(self, perception)
+
+    def SetTagFormat(self, tags):
+        return _oemaestro.OEMaestroDesignUnitReader_SetTagFormat(self, tags)
+
+    def GetPerception(self):
+        return _oemaestro.OEMaestroDesignUnitReader_GetPerception(self)
+
+    def GetTagFormat(self):
+        return _oemaestro.OEMaestroDesignUnitReader_GetTagFormat(self)
+
+    def GetConfig(self):
+        return _oemaestro.OEMaestroDesignUnitReader_GetConfig(self)
+    __swig_destroy__ = _oemaestro.delete_OEMaestroDesignUnitReader
+
+    def __init__(self, *args):
+        _oemaestro.OEMaestroDesignUnitReader_swiginit(self, _oemaestro.new_OEMaestroDesignUnitReader(*args))
+
+    def __repr__(self):
+        config = self.GetConfig()
+        return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
+
+
+# Register OEMaestroDesignUnitReader in _oemaestro:
+_oemaestro.OEMaestroDesignUnitReader_swigregister(OEMaestroDesignUnitReader)
+
+def OEReadMaestroDesignUnit(*args):
+    return _oemaestro.OEReadMaestroDesignUnit(*args)
 

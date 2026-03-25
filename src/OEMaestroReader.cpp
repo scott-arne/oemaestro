@@ -9,30 +9,22 @@ namespace OEMaestro {
 struct OEMaestroReader::Impl {
     std::unique_ptr<MaestroReader> reader;
     MolConverter converter;
-    OEChem::OEConfTestBase* conf_test;  // Owned
+    std::unique_ptr<OEChem::OEConfTestBase> conf_test;
     OEChem::OEMol pending_mol;
     bool has_pending = false;
     MaestroMol maestro_buf;
-    // Keep StreamAdapter alive for oeifstream path
-    std::unique_ptr<StreamAdapter> stream_adapter;
 
     Impl(const std::string& filename, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
-          conf_test(new OEChem::OEDefaultConfTest()) {
+          conf_test(std::make_unique<OEChem::OEDefaultConfTest>()) {
         reader = std::make_unique<MaestroReader>(filename);
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
-          conf_test(new OEChem::OEDefaultConfTest()) {
-        stream_adapter = std::make_unique<StreamAdapter>(ifs);
-        // Create a shared_ptr that doesn't delete (adapter is owned by us)
-        auto stream_ptr = std::shared_ptr<std::istream>(
-            stream_adapter.get(), [](std::istream*) {});
-        reader = std::make_unique<MaestroReader>(stream_ptr);
+          conf_test(std::make_unique<OEChem::OEDefaultConfTest>()) {
+        reader = std::make_unique<MaestroReader>(make_maeparser_stream(ifs));
     }
-
-    ~Impl() { delete conf_test; }
 
     bool Read(OEChem::OEMol& mol) {
         // Default conf test -- no grouping, simple pass-through
@@ -85,6 +77,12 @@ bool OEMaestroReader::Read(OEChem::OEMol& mol) {
 }
 
 bool OEMaestroReader::Read(OEChem::OEMolBase& mol) {
+    // Consume any pending molecule left by conformer grouping lookahead
+    if (pimpl_->has_pending) {
+        mol = pimpl_->pending_mol;
+        pimpl_->has_pending = false;
+        return true;
+    }
     if (!pimpl_->reader->Read(pimpl_->maestro_buf))
         return false;
     pimpl_->converter.Convert(pimpl_->maestro_buf, mol);
@@ -92,8 +90,11 @@ bool OEMaestroReader::Read(OEChem::OEMolBase& mol) {
 }
 
 void OEMaestroReader::SetConfTest(OEChem::OEConfTestBase* conf_test) {
-    delete pimpl_->conf_test;
-    pimpl_->conf_test = conf_test ? conf_test : new OEChem::OEDefaultConfTest();
+    if (conf_test) {
+        pimpl_->conf_test.reset(conf_test);
+    } else {
+        pimpl_->conf_test = std::make_unique<OEChem::OEDefaultConfTest>();
+    }
 }
 
 void OEMaestroReader::SetPerception(OEMaestroPerception perception) {

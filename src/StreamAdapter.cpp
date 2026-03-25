@@ -24,4 +24,8 @@ OEStreamBuf::int_type OEStreamBuf::underflow() {
 StreamAdapter::StreamAdapter(OEPlatform::oeifstream& ifs)
     : std::istream(&buf_), buf_(ifs) {}
 
+std::shared_ptr<std::istream> make_maeparser_stream(OEPlatform::oeifstream& ifs) {
+    return std::shared_ptr<std::istream>(new StreamAdapter(ifs));
+}
+
 }  // namespace OEMaestro

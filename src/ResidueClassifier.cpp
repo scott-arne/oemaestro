@@ -2,7 +2,11 @@
 
 namespace OEMaestro {
 
-static std::string StripWhitespace(const std::string& s) {
+static bool needs_trim(const std::string& s) {
+    return !s.empty() && (s.front() <= ' ' || s.back() <= ' ');
+}
+
+static std::string strip_whitespace(const std::string& s) {
     auto start = s.find_first_not_of(" \t\n\r");
     if (start == std::string::npos) return "";
     auto end = s.find_last_not_of(" \t\n\r");
@@ -26,7 +30,7 @@ const std::unordered_set<std::string>& GetSolventCodes() {
         "2PE", "P33", "PG0", "15P", "XPE", "PDO", "PIG", "BU1", "BU2",
         "BU3",
         // BUFFER MOLECULES
-        "TRS", "MES", "EPE", "CIT", "TAR", "IMD", "CAC", "POP", "MPO",
+        "TRS", "MES", "EPE", "TAR", "IMD", "CAC", "POP", "MPO",
         "ADA", "BIC", "NHE", "BTB", "B3P",
         // DETERGENTS & ADDITIVES
         "BME", "DTT", "SDS", "LDA", "BOG", "OLC", "PLM", "MYR", "LMT",
@@ -64,11 +68,15 @@ const std::unordered_set<std::string>& GetCofactorCodes() {
 }
 
 bool IsSolventResidue(const std::string& resname) {
-    return GetSolventCodes().count(StripWhitespace(resname)) > 0;
+    if (needs_trim(resname))
+        return GetSolventCodes().count(strip_whitespace(resname)) > 0;
+    return GetSolventCodes().count(resname) > 0;
 }
 
 bool IsCofactorResidue(const std::string& resname) {
-    return GetCofactorCodes().count(StripWhitespace(resname)) > 0;
+    if (needs_trim(resname))
+        return GetCofactorCodes().count(strip_whitespace(resname)) > 0;
+    return GetCofactorCodes().count(resname) > 0;
 }
 
 }  // namespace OEMaestro

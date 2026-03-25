@@ -16,7 +16,6 @@ TEST(ResidueClassifierTest, BuffersAreSolvent) {
     EXPECT_TRUE(OEMaestro::IsSolventResidue("TRS"));
     EXPECT_TRUE(OEMaestro::IsSolventResidue("MES"));
     EXPECT_TRUE(OEMaestro::IsSolventResidue("EPE"));
-    EXPECT_TRUE(OEMaestro::IsSolventResidue("CIT"));
 }
 
 TEST(ResidueClassifierTest, DetergentsAreSolvent) {
@@ -73,8 +72,8 @@ TEST(ResidueClassifierTest, WhitespaceStripping) {
     EXPECT_TRUE(OEMaestro::IsCofactorResidue(" HEM"));
 }
 
-TEST(ResidueClassifierTest, CITInBothSets) {
-    EXPECT_TRUE(OEMaestro::IsSolventResidue("CIT"));
+TEST(ResidueClassifierTest, CITIsCofactorOnly) {
+    EXPECT_FALSE(OEMaestro::IsSolventResidue("CIT"));
     EXPECT_TRUE(OEMaestro::IsCofactorResidue("CIT"));
 }
 

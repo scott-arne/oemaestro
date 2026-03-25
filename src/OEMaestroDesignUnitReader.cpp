@@ -45,39 +45,31 @@ public:
 
 // --- Impl ---
 
+using OEAtomPredPtr = std::unique_ptr<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>>;
+
 struct OEMaestroDesignUnitReader::Impl {
     std::unique_ptr<MaestroReader> reader;
     MolConverter converter;
     MaestroMol maestro_buf;
-    std::unique_ptr<StreamAdapter> stream_adapter;
 
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* ligand_pred;
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* solvent_pred;
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* cofactor_pred;
+    OEAtomPredPtr ligand_pred;
+    OEAtomPredPtr solvent_pred;
+    OEAtomPredPtr cofactor_pred;
 
     Impl(const std::string& filename, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
-          ligand_pred(new IsLigandAtom()),
-          solvent_pred(new IsSolventAtom()),
-          cofactor_pred(new IsCofactorAtom()) {
+          ligand_pred(std::make_unique<IsLigandAtom>()),
+          solvent_pred(std::make_unique<IsSolventAtom>()),
+          cofactor_pred(std::make_unique<IsCofactorAtom>()) {
         reader = std::make_unique<MaestroReader>(filename);
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
-          ligand_pred(new IsLigandAtom()),
-          solvent_pred(new IsSolventAtom()),
-          cofactor_pred(new IsCofactorAtom()) {
-        stream_adapter = std::make_unique<StreamAdapter>(ifs);
-        auto stream_ptr = std::shared_ptr<std::istream>(
-            stream_adapter.get(), [](std::istream*) {});
-        reader = std::make_unique<MaestroReader>(stream_ptr);
-    }
-
-    ~Impl() {
-        delete ligand_pred;
-        delete solvent_pred;
-        delete cofactor_pred;
+          ligand_pred(std::make_unique<IsLigandAtom>()),
+          solvent_pred(std::make_unique<IsSolventAtom>()),
+          cofactor_pred(std::make_unique<IsCofactorAtom>()) {
+        reader = std::make_unique<MaestroReader>(make_maeparser_stream(ifs));
     }
 
     bool Read(OEBio::OEDesignUnit& du) {
@@ -122,20 +114,20 @@ bool OEMaestroDesignUnitReader::Read(OEBio::OEDesignUnit& du) {
 
 void OEMaestroDesignUnitReader::SetLigandPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    delete pimpl_->ligand_pred;
-    pimpl_->ligand_pred = static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy());
+    pimpl_->ligand_pred.reset(
+        static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
 void OEMaestroDesignUnitReader::SetSolventPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    delete pimpl_->solvent_pred;
-    pimpl_->solvent_pred = static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy());
+    pimpl_->solvent_pred.reset(
+        static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
 void OEMaestroDesignUnitReader::SetCofactorPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    delete pimpl_->cofactor_pred;
-    pimpl_->cofactor_pred = static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy());
+    pimpl_->cofactor_pred.reset(
+        static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
 void OEMaestroDesignUnitReader::SetPerception(OEMaestroPerception perception) {

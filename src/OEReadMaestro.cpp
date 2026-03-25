@@ -28,9 +28,7 @@ bool OEReadMaestro(const std::string& filename, OEChem::OEMolBase& mol,
 
 bool OEReadMaestro(OEPlatform::oeifstream& ifs, OEChem::OEMolBase& mol,
                     OEMaestroReaderConfig config) {
-    StreamAdapter adapter(ifs);
-    auto stream_ptr = std::shared_ptr<std::istream>(&adapter, [](std::istream*) {});
-    MaestroReader reader(stream_ptr);
+    MaestroReader reader(make_maeparser_stream(ifs));
     MolConverter converter(config.tags, config.perception);
     MaestroMol maestro_mol;
     if (!reader.Read(maestro_mol))

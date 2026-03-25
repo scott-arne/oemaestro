@@ -70,7 +70,8 @@ private:
     /// Run perception steps according to the current perception bitmask.
     ///
     /// :param mol: Molecule to perceive.
-    void RunPerception(OEChem::OEMolBase& mol) const;
+    /// :param dimension: Coordinate dimension (2 or 3), avoids recomputation.
+    void RunPerception(OEChem::OEMolBase& mol, int dimension) const;
 
     OEMaestroTag tags_;
     OEMaestroPerception perception_;

@@ -47,6 +47,15 @@ private:
     OEStreamBuf buf_;
 };
 
+/// Creates a shared_ptr<std::istream> from an oeifstream for use with maeparser.
+///
+/// The returned shared_ptr owns the underlying StreamAdapter, keeping it alive
+/// as long as the maeparser Reader holds the pointer.
+///
+/// :param ifs: The OpenEye input file stream to adapt.
+/// :returns: Shared pointer to an istream wrapping the oeifstream.
+std::shared_ptr<std::istream> make_maeparser_stream(OEPlatform::oeifstream& ifs);
+
 }  // namespace OEMaestro
 
 #endif  // OEMAESTRO_STREAMADAPTER_H

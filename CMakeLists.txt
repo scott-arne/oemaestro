@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.2.0 LANGUAGES CXX)
+project(oemaestro VERSION 0.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,11 +81,19 @@ target_include_directories(oemaestro
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
-        OpenEye::OEBio
-        OpenEye::OEGrid
     PRIVATE
         maeparser
 )
+
+# OEBio and OEGrid are optional targets -- in shared-library builds (e.g. from
+# openeye-toolkits Python package) these symbols are already in liboechem, so a
+# separate library may not exist.
+if(TARGET OpenEye::OEBio)
+    target_link_libraries(oemaestro PUBLIC OpenEye::OEBio)
+endif()
+if(TARGET OpenEye::OEGrid)
+    target_link_libraries(oemaestro PUBLIC OpenEye::OEGrid)
+endif()
 
 if(OEMAESTRO_BUILD_TESTS)
     enable_testing()

@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.2.0"
-__version_info__ = (0, 2, 0)
+__version__ = "0.2.1"
+__version_info__ = (0, 2, 1)
 
 
 def _ensure_library_compat():
@@ -166,6 +166,8 @@ class OEMaestroReader:
 
     Wraps the C++ OEMaestroReader and provides Pythonic iteration.
     Each iteration yields an ``oechem.OEGraphMol`` populated from one CT block.
+    When a conformer test is set via ``set_conf_test``, consecutive matching
+    CTs are grouped into multi-conformer ``OEMol`` objects.
 
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param config: Optional OEMaestroReaderConfig for tag format and perception.
@@ -178,20 +180,48 @@ class OEMaestroReader:
     """
 
     def __init__(self, source, config=None):
+        from openeye import oechem
+        self._oechem = oechem
         if config is not None:
             self._reader = _CppOEMaestroReader(source, config)
         else:
             self._reader = _CppOEMaestroReader(source)
+        self._conf_test = None
+        self._pending = None
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        from openeye import oechem
-        mol = oechem.OEGraphMol()
-        if self._reader.Read(mol):
-            return mol
-        raise StopIteration
+        if self._conf_test is None:
+            mol = self._oechem.OEGraphMol()
+            if self._reader.Read(mol):
+                return mol
+            raise StopIteration
+
+        # Conformer grouping mode
+        oechem = self._oechem
+        if self._pending is not None:
+            mol = self._pending
+            self._pending = None
+        else:
+            ct = oechem.OEGraphMol()
+            if not self._reader.Read(ct):
+                raise StopIteration
+            mol = oechem.OEMol(ct)
+
+        # Lookahead: group consecutive matching CTs as conformers
+        while True:
+            ct = oechem.OEGraphMol()
+            if not self._reader.Read(ct):
+                break
+            if self._conf_test.CompareMols(mol, ct):
+                mol.NewConf(ct)
+            else:
+                self._pending = oechem.OEMol(ct)
+                break
+
+        return mol
 
     def read(self, mol):
         """Read the next molecule into the provided OEMolBase.
@@ -200,6 +230,17 @@ class OEMaestroReader:
         :returns: True if a molecule was read, False at EOF.
         """
         return self._reader.Read(mol)
+
+    def set_conf_test(self, conf_test):
+        """Set a conformer test for grouping CT blocks.
+
+        When set, consecutive CTs that match under the test are grouped as
+        conformers in a single OEMol. Pass None to disable grouping.
+
+        :param conf_test: An OEConfTestBase object, or None to disable.
+        """
+        self._conf_test = conf_test
+        self._pending = None
 
     def set_perception(self, perception):
         """Set the perception bitmask.
@@ -283,6 +324,8 @@ class OEMaestroDesignUnitReader:
     """
 
     def __init__(self, source, config=None):
+        from openeye import oechem
+        self._oechem = oechem
         if config is not None:
             self._reader = _CppOEMaestroDesignUnitReader(source, config)
         else:
@@ -292,8 +335,7 @@ class OEMaestroDesignUnitReader:
         return self
 
     def __next__(self):
-        from openeye import oechem
-        du = oechem.OEDesignUnit()
+        du = self._oechem.OEDesignUnit()
         if self._reader.Read(du):
             return du
         raise StopIteration

@@ -3,6 +3,7 @@
 
 #include <oechem.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace OEMaestro {
@@ -77,13 +78,14 @@ void MolConverter::Convert(const MaestroMol& maestro_mol, OEChem::OEMolBase& mol
             static_cast<unsigned int>(bond.order));
     }
 
-    mol.SetDimension(OEChem::OEGetDimensionFromCoords(mol));
+    int dimension = OEChem::OEGetDimensionFromCoords(mol);
+    mol.SetDimension(dimension);
 
     if (tags_ != TAG_NONE) {
         ApplyDataTags(maestro_mol, mol);
     }
 
-    RunPerception(mol);
+    RunPerception(mol, dimension);
 }
 
 void MolConverter::SetTagFormat(OEMaestroTag tags) {
@@ -135,27 +137,32 @@ std::string MolConverter::FormatTagName(const std::string& key) const {
 
 void MolConverter::ApplyDataTags(const MaestroMol& maestro_mol,
                                   OEChem::OEMolBase& mol) const {
+    std::unordered_map<std::string, std::string> tag_cache;
+    auto format_tag = [&](const std::string& key) -> const std::string& {
+        auto [it, inserted] = tag_cache.try_emplace(key);
+        if (inserted) it->second = FormatTagName(key);
+        return it->second;
+    };
+
     // CT-level properties -> SD data
     for (const auto& [key, val] : maestro_mol.ct_properties) {
-        OEChem::OESetSDData(mol, FormatTagName(key), val);
+        OEChem::OESetSDData(mol, format_tag(key), val);
     }
 
-    // Atom-level properties -> generic string data
-    size_t i = 0;
-    for (OESystem::OEIter<OEChem::OEAtomBase> ai = mol.GetAtoms(); ai; ++ai, ++i) {
-        if (i < maestro_mol.atoms.size()) {
-            for (const auto& [key, val] : maestro_mol.atoms[i].properties) {
-                ai->SetStringData(FormatTagName(key).c_str(), val);
+    // Atom-level properties -> generic string data (use GetIdx for safe mapping)
+    for (OESystem::OEIter<OEChem::OEAtomBase> ai = mol.GetAtoms(); ai; ++ai) {
+        size_t idx = ai->GetIdx();
+        if (idx < maestro_mol.atoms.size()) {
+            for (const auto& [key, val] : maestro_mol.atoms[idx].properties) {
+                ai->SetStringData(format_tag(key).c_str(), val);
             }
         }
     }
 }
 
-void MolConverter::RunPerception(OEChem::OEMolBase& mol) const {
-    if (perception_ & PERCEPTION_CONNECTIVITY) {
-        if (OEChem::OEGetDimensionFromCoords(mol) == 3) {
-            OEChem::OEDetermineConnectivity(mol);
-        }
+void MolConverter::RunPerception(OEChem::OEMolBase& mol, int dimension) const {
+    if ((perception_ & PERCEPTION_CONNECTIVITY) && dimension == 3) {
+        OEChem::OEDetermineConnectivity(mol);
     }
     if (perception_ & PERCEPTION_RINGS) {
         OEChem::OEFindRingAtomsAndBonds(mol);

@@ -3,6 +3,13 @@
 
 namespace OEMaestro {
 
+void MaestroMol::Clear() {
+    title.clear();
+    atoms.clear();
+    bonds.clear();
+    ct_properties.clear();
+}
+
 size_t MaestroMol::NumAtoms() const { return atoms.size(); }
 
 size_t MaestroMol::NumBonds() const { return bonds.size(); }

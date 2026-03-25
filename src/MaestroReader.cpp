@@ -2,6 +2,7 @@
 #include "oemaestro/Error.h"
 
 #include <Reader.hpp>
+#include <MaeBlock.hpp>
 #include <MaeConstants.hpp>
 
 #include <fstream>
@@ -57,7 +58,7 @@ struct MaestroReader::Impl {
 
         if (!block) return false;
 
-        mol = MaestroMol{};  // Clear
+        mol.Clear();
 
         // Extract title
         if (block->hasStringProperty(schrodinger::mae::CT_TITLE)) {
@@ -80,6 +81,11 @@ struct MaestroReader::Impl {
         for (const auto& [key, val] : block->getProperties<double>()) {
             if (STRUCTURAL_CT_PROPS.count(key) == 0) {
                 mol.ct_properties[key] = std::to_string(val);
+            }
+        }
+        for (const auto& [key, val] : block->getProperties<schrodinger::mae::BoolProperty>()) {
+            if (STRUCTURAL_CT_PROPS.count(key) == 0) {
+                mol.ct_properties[key] = (val == 1u) ? "1" : "0";
             }
         }
 
@@ -197,6 +203,14 @@ struct MaestroReader::Impl {
                 bond_block->getIntProperty(schrodinger::mae::BOND_ATOM_2);
             auto order_prop =
                 bond_block->getIntProperty(schrodinger::mae::BOND_ORDER);
+
+            if (!from_prop || !to_prop || !order_prop) {
+                throw MaestroParseError(
+                    "Bond block missing required property column(s): " +
+                    std::string(!from_prop ? "bond_atom_1 " : "") +
+                    std::string(!to_prop ? "bond_atom_2 " : "") +
+                    std::string(!order_prop ? "bond_order" : ""));
+            }
 
             for (size_t i = 0; i < num_bonds; ++i) {
                 auto& bond = mol.bonds[i];
