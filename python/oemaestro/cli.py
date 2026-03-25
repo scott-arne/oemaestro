@@ -1,7 +1,7 @@
 """Command-line interface for oemaestro.
 
 Converts Maestro format files (.mae, .mae.gz, .maegz) to OpenEye-supported
-molecular formats and vice versa.
+molecular formats.
 """
 import sys
 from pathlib import Path
@@ -119,22 +119,10 @@ def _parse_perception_flags(values):
     return result
 
 
-@click.group(invoke_without_command=True)
-@click.version_option(__version__, prog_name="oemaestro")
-@click.pass_context
-def cli(ctx):
-    """[bold]oemaestro[/bold] -- Maestro format converter for OpenEye Toolkits.
-
-    Convert between Schrodinger Maestro files (.mae, .mae.gz, .maegz) and
-    OpenEye-supported molecular formats.
-    """
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
-
-
-@cli.command()
+@click.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
+@click.version_option(__version__, prog_name="oemaestro")
 @click.option(
     "--tags", "-t",
     multiple=True,
@@ -188,32 +176,58 @@ def cli(ctx):
     multiple=True,
     help="Only keep SD data tags matching this pattern (supports * wildcards). Can be specified multiple times.",
 )
-def convert(input_file, output_file, tags, perception, conf_test, title_field,
-            count, append, quiet, sd_tag_filter):
+def cli(input_file, output_file, tags, perception, conf_test, title_field,
+        count, append, quiet, sd_tag_filter):
     """Convert a Maestro file to an OpenEye-supported format.
 
-    Reads molecules from INPUT_FILE (Maestro format) and writes them to
-    OUTPUT_FILE in the format determined by its extension.
+    Reads molecules from INPUT_FILE (.mae, .mae.gz, .maegz) and writes
+    them to OUTPUT_FILE in the format determined by its extension.
 
     \b
     Supported output formats:
-      .sdf          SD file
-      .mol2         Tripos Mol2
-      .pdb          Protein Data Bank
-      .smi / .ism   SMILES / Isomeric SMILES
+      .sdf            SD file
+      .mol2           Tripos Mol2
+      .pdb            Protein Data Bank
+      .smi / .ism     SMILES / Isomeric SMILES
       .oeb / .oeb.gz  OpenEye binary
-      .xyz          XYZ coordinates
-      .csv          CSV
-      .mol          MDL Molfile
-      .can          Canonical SMILES
+      .xyz            XYZ coordinates
+      .csv            CSV
+      .mol            MDL Molfile
+      .can            Canonical SMILES
+
+    \b
+    Tag format components (--tags):
+      all    Include full Maestro key (type_owner_name)
+      none   Strip all data tags
+      name   Property name only
+      type   Data type prefix (s_, r_, i_, b_)
+      owner  Owner prefix (m_, user_, etc.)
+
+    \b
+    Perception steps (--perception):
+      all             Run all perception (default)
+      none            Skip all perception
+      connectivity    OEDetermineConnectivity
+      rings           OEFindRingAtomsAndBonds
+      bond-orders     OEPerceiveBondOrders
+      implicit-h      OEAssignImplicitHydrogens
+      formal-charges  OEAssignFormalCharges
+
+    \b
+    Conformer grouping tests (--conf-test):
+      none           No grouping (each CT = separate molecule)
+      default        OEDefaultConfTest
+      isomeric       OEIsomericConfTest (includes stereochemistry)
+      absolute       OEAbsoluteConfTest
+      abs-canonical  OEAbsCanonicalConfTest
 
     \b
     Examples:
-      oemaestro convert input.maegz output.sdf
-      oemaestro convert input.mae output.pdb --perception none
-      oemaestro convert multi.maegz mols.sdf --conf-test isomeric
-      oemaestro convert input.mae output.sdf --tags name --tags type
-      oemaestro convert input.mae out.sdf -n 10 --quiet
+      oemaestro input.maegz output.sdf
+      oemaestro input.mae output.pdb --perception none
+      oemaestro multi.maegz mols.sdf --conf-test isomeric
+      oemaestro input.mae output.sdf --tags name --tags type
+      oemaestro input.mae out.sdf -n 10 --quiet
     """
     from openeye import oechem
 
@@ -335,185 +349,6 @@ def convert(input_file, output_file, tags, perception, conf_test, title_field,
             f"\nConverted {mol_count} molecule(s) -> {output_path}",
             fg="green",
         )
-
-
-@cli.command()
-@click.argument("input_file", type=click.Path(exists=True))
-@click.option(
-    "--tags", "-t",
-    multiple=True,
-    type=click.Choice(list(TAG_CHOICES.keys()), case_sensitive=False),
-    default=("all",),
-    show_default=True,
-    help="Data tag components to include.",
-)
-@click.option(
-    "--perception", "-p",
-    multiple=True,
-    type=click.Choice(list(PERCEPTION_CHOICES.keys()), case_sensitive=False),
-    default=("all",),
-    show_default=True,
-    help="Perception steps to run.",
-)
-@click.option(
-    "--count", "-n",
-    type=int,
-    default=None,
-    help="Maximum number of molecules to inspect.",
-)
-@click.option(
-    "--show-tags", is_flag=True, default=False,
-    help="Show SD data tags for each molecule.",
-)
-@click.option(
-    "--show-residues", is_flag=True, default=False,
-    help="Show unique residues per molecule.",
-)
-@click.option(
-    "--show-atoms", is_flag=True, default=False,
-    help="Show per-atom details (name, element, coords).",
-)
-@click.option(
-    "--atom-limit",
-    type=int,
-    default=20,
-    show_default=True,
-    help="Maximum atoms to display per molecule when --show-atoms is set.",
-)
-def info(input_file, tags, perception, count, show_tags, show_residues,
-         show_atoms, atom_limit):
-    """Display summary information about molecules in a Maestro file.
-
-    \b
-    Examples:
-      oemaestro info input.mae
-      oemaestro info protein.maegz --show-residues
-      oemaestro info multi.mae --show-tags -n 5
-      oemaestro info ligand.mae --show-atoms --atom-limit 50
-    """
-    from openeye import oechem
-
-    if not _is_maestro_input(input_file):
-        click.secho(
-            f"Error: Input must be a Maestro file, got '{_get_file_ext(input_file)}'",
-            fg="red", err=True,
-        )
-        sys.exit(1)
-
-    config = OEMaestroReaderConfig()
-    config.tags = _parse_tag_flags(tags)
-    config.perception = _parse_perception_flags(perception)
-
-    reader = OEMaestroReader(str(input_file), config=config)
-
-    total_atoms = 0
-    total_bonds = 0
-    mol_count = 0
-
-    for mol in reader:
-        mol_count += 1
-        natoms = mol.NumAtoms()
-        nbonds = mol.NumBonds()
-        total_atoms += natoms
-        total_bonds += nbonds
-
-        title = mol.GetTitle() or "(untitled)"
-        click.secho(f"\n--- Molecule {mol_count}: {title} ---", fg="cyan", bold=True)
-        click.echo(f"  Atoms: {natoms}  Bonds: {nbonds}")
-
-        chains = set()
-        residues = {}
-        for atom in mol.GetAtoms():
-            res = oechem.OEAtomGetResidue(atom)
-            chain = res.GetChainID()
-            chains.add(chain)
-            rkey = (chain, res.GetResidueNumber(), res.GetName().strip())
-            if rkey not in residues:
-                residues[rkey] = 0
-            residues[rkey] += 1
-
-        if chains - {" ", ""}:
-            click.echo(f"  Chains: {', '.join(sorted(chains - {' ', ''}))}")
-            click.echo(f"  Residues: {len(residues)}")
-
-        if show_tags:
-            tag_pairs = list(oechem.OEGetSDDataPairs(mol))
-            if tag_pairs:
-                click.secho("  SD Data Tags:", fg="yellow")
-                for pair in tag_pairs:
-                    val = pair.GetValue()
-                    display_val = val[:60] + "..." if len(val) > 60 else val
-                    click.echo(f"    {pair.GetTag()} = {display_val}")
-            else:
-                click.echo("  SD Data Tags: (none)")
-
-        if show_residues:
-            click.secho("  Residues:", fg="yellow")
-            for (chain, resnum, resname), atom_count in sorted(residues.items()):
-                click.echo(f"    {chain}:{resname}:{resnum} ({atom_count} atoms)")
-
-        if show_atoms:
-            click.secho("  Atoms:", fg="yellow")
-            displayed = 0
-            for atom in mol.GetAtoms():
-                if displayed >= atom_limit:
-                    remaining = natoms - displayed
-                    click.echo(f"    ... and {remaining} more atoms")
-                    break
-                res = oechem.OEAtomGetResidue(atom)
-                coords = mol.GetCoords(atom)
-                click.echo(
-                    f"    {atom.GetName()!r:6s} Z={atom.GetAtomicNum():2d} "
-                    f"({coords[0]:8.3f}, {coords[1]:8.3f}, {coords[2]:8.3f}) "
-                    f"{res.GetChainID()}:{res.GetName().strip()}:{res.GetResidueNumber()}"
-                )
-                displayed += 1
-
-        if count and mol_count >= count:
-            break
-
-    click.secho(f"\n{'=' * 40}", fg="green")
-    click.secho(
-        f"Total: {mol_count} molecule(s), {total_atoms} atoms, {total_bonds} bonds",
-        fg="green", bold=True,
-    )
-
-
-@cli.command(name="formats")
-def list_formats():
-    """List supported input and output file formats."""
-    click.secho("\nInput formats (Maestro):", fg="cyan", bold=True)
-    click.echo("  .mae        Maestro file")
-    click.echo("  .mae.gz     Maestro file (gzip compressed)")
-    click.echo("  .maegz      Maestro file (gzip compressed)")
-
-    click.secho("\nOutput formats (OpenEye):", fg="cyan", bold=True)
-    for ext, desc in sorted(SUPPORTED_OUTPUT_EXTENSIONS.items()):
-        click.echo(f"  {ext:12s}  {desc}")
-
-    click.secho("\nConformer grouping tests:", fg="cyan", bold=True)
-    click.echo("  none           No grouping (each CT = separate molecule)")
-    click.echo("  default        OEDefaultConfTest")
-    click.echo("  isomeric       OEIsomericConfTest (includes stereochemistry)")
-    click.echo("  absolute       OEAbsoluteConfTest")
-    click.echo("  abs-canonical  OEAbsCanonicalConfTest")
-
-    click.secho("\nTag format components:", fg="cyan", bold=True)
-    click.echo("  all    Include full Maestro key (type_owner_name)")
-    click.echo("  none   Strip all data tags")
-    click.echo("  name   Property name only")
-    click.echo("  type   Data type prefix (s_, r_, i_, b_)")
-    click.echo("  owner  Owner prefix (m_, user_, etc.)")
-
-    click.secho("\nPerception steps:", fg="cyan", bold=True)
-    click.echo("  all             Run all perception (default)")
-    click.echo("  none            Skip all perception")
-    click.echo("  connectivity    OEDetermineConnectivity")
-    click.echo("  rings           OEFindRingAtomsAndBonds")
-    click.echo("  bond-orders     OEPerceiveBondOrders")
-    click.echo("  implicit-h      OEAssignImplicitHydrogens")
-    click.echo("  formal-charges  OEAssignFormalCharges")
-    click.echo()
 
 
 def main():
