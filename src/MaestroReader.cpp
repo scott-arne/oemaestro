@@ -15,7 +15,7 @@ static const std::unordered_set<std::string> STRUCTURAL_ATOM_PROPS = {
     "i_m_atomic_number", "r_m_x_coord", "r_m_y_coord", "r_m_z_coord",
     "i_m_formal_charge", "s_m_pdb_atom_name", "s_m_pdb_residue_name",
     "i_m_residue_number", "s_m_chain_name", "s_m_pdb_insertion_code",
-    "r_m_pdb_tfactor", "r_m_pdb_occupancy"
+    "r_m_pdb_tfactor", "r_m_pdb_occupancy", "i_m_secondary_structure"
 };
 
 // CT-level structural properties to skip in data tags
@@ -114,6 +114,8 @@ struct MaestroReader::Impl {
                 atom_block->getRealProperty("r_m_pdb_tfactor");
             auto occ_prop =
                 atom_block->getRealProperty("r_m_pdb_occupancy");
+            auto ss_prop =
+                atom_block->getIntProperty("i_m_secondary_structure");
 
             for (size_t i = 0; i < num_atoms; ++i) {
                 auto& atom = mol.atoms[i];
@@ -141,6 +143,8 @@ struct MaestroReader::Impl {
                     atom.bfactor = (*bfac_prop)[i];
                 if (occ_prop && occ_prop->isDefined(i))
                     atom.occupancy = (*occ_prop)[i];
+                if (ss_prop && ss_prop->isDefined(i))
+                    atom.secondary_structure = (*ss_prop)[i];
             }
 
             // Extract non-structural atom properties

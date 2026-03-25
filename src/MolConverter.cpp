@@ -7,6 +7,16 @@
 
 namespace OEMaestro {
 
+/// Map Maestro i_m_secondary_structure values to OpenEye constants.
+/// Maestro: 0=loop/coil, 1=helix, 2=strand/sheet.
+static int MaestroSSToOE(int maestro_ss) {
+    switch (maestro_ss) {
+        case 1:  return OEBio::OESecondaryStructure::HelixAlpha;
+        case 2:  return OEBio::OESecondaryStructure::Sheet;
+        default: return OEBio::OESecondaryStructure::Unassigned;
+    }
+}
+
 MolConverter::MolConverter()
     : tags_(TAG_ALL), perception_(PERCEPTION_ALL) {}
 
@@ -39,6 +49,9 @@ void MolConverter::Convert(const MaestroMol& maestro_mol, OEChem::OEMolBase& mol
         res.SetInsertCode(atom.insert_code.empty() ? ' ' : atom.insert_code[0]);
         res.SetBFactor(atom.bfactor);
         res.SetOccupancy(atom.occupancy);
+        if (atom.secondary_structure >= 0) {
+            res.SetSecondaryStructure(MaestroSSToOE(atom.secondary_structure));
+        }
         OEChem::OEAtomSetResidue(oeatom, res);
 
         atom_ptrs.push_back(oeatom);
