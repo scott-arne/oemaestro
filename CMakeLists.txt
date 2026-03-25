@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.1.1 LANGUAGES CXX)
+project(oemaestro VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -64,6 +64,9 @@ set(OEMAESTRO_SOURCES
     src/StreamAdapter.cpp
     src/OEMaestroReader.cpp
     src/OEReadMaestro.cpp
+    src/ResidueClassifier.cpp
+    src/OEMaestroDesignUnitReader.cpp
+    src/OEReadMaestroDesignUnit.cpp
 )
 
 add_library(oemaestro ${OEMAESTRO_SOURCES})
@@ -78,6 +81,8 @@ target_include_directories(oemaestro
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
+        OpenEye::OEBio
+        OpenEye::OEGrid
     PRIVATE
         maeparser
 )

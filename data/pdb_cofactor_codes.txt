@@ -1,0 +1,101 @@
+## NUCLEOTIDE COFACTORS
+NAD - Nicotinamide adenine dinucleotide (oxidized)
+NAI - Nicotinamide adenine dinucleotide (reduced, NADH) 
+NAP - NADP+ (Nicotinamide adenine dinucleotide phosphate, oxidized)
+NDP - NADPH (Nicotinamide adenine dinucleotide phosphate, reduced)
+FAD - Flavin adenine dinucleotide
+FMN - Flavin mononucleotide (Riboflavin-5'-phosphate)
+ATP - Adenosine triphosphate
+ADP - Adenosine diphosphate
+AMP - Adenosine monophosphate
+GTP - Guanosine triphosphate
+GDP - Guanosine diphosphate
+GMP - Guanosine monophosphate
+CTP - Cytidine triphosphate
+CDP - Cytidine diphosphate
+CMP - Cytidine monophosphate
+UTP - Uridine triphosphate
+UDP - Uridine diphosphate
+UMP - Uridine monophosphate
+TTP - Thymidine triphosphate
+ANP - Phosphoaminophosphonic acid-adenylate ester (AMP-PNP, non-hydrolyzable ATP analog)
+ACP - Phosphomethylphosphonic acid-adenylate ester (AMP-PCP)
+AGS - Phosphothiophosphoric acid-adenylate ester (ATP-gamma-S)
+GNP - Phosphoaminophosphonic acid-guanylate ester (GMP-PNP, non-hydrolyzable GTP analog)
+GSP - Phosphothiophosphoric acid-guanylate ester (GTP-gamma-S)
+ADN - Adenosine (free nucleoside)
+
+## COENZYMES & VITAMIN-DERIVED COFACTORS
+COA - Coenzyme A
+ACO - Acetyl-coenzyme A
+SAM - S-Adenosylmethionine
+SAH - S-Adenosylhomocysteine
+PLP - Pyridoxal-5'-phosphate (Vitamin B6 cofactor)
+PMP - Pyridoxamine-5'-phosphate
+TPP - Thiamine pyrophosphate (Vitamin B1 cofactor)
+THM - Thiamine monophosphate
+BTN - Biotin (Vitamin B7)
+H4B - Tetrahydrobiopterin (BH4)
+THG - Tetrahydrofolate (THF)
+FOL - Folic acid
+MTX - Methotrexate (folate analog / inhibitor)
+ASC - Ascorbic acid (Vitamin C)
+RBF - Riboflavin (Vitamin B2)
+NCN - Nicotinamide
+NCA - Nicotinic acid
+UQ  - Ubiquinone (Coenzyme Q)
+MQ7 - Menaquinone-7 (Vitamin K2)
+PHQ - Phylloquinone (Vitamin K1)
+RET - Retinal (Vitamin A aldehyde)
+REA - Retinoic acid
+
+## HEME & PORPHYRINS
+HEM - Protoporphyrin IX containing Fe (Heme)
+HEC - Heme C
+HEA - Heme A
+HEB - Heme B (alt code)
+BCL - Bacteriochlorophyll A
+CLA - Chlorophyll A
+CLB - Chlorophyll B
+BPH - Bacteriopheophytin
+PHO - Pheophytin A
+SRM - Siroheme
+
+## IRON-SULFUR CLUSTER LIGANDS (organic components)
+SF4 - Iron-sulfur cluster [4Fe-4S]
+FES - Iron-sulfur cluster [2Fe-2S]
+F3S - Iron-sulfur cluster [3Fe-4S]
+
+## SUGAR NUCLEOTIDES & SUGAR COFACTORS
+UDP - Uridine diphosphate (also in nucleotides)
+A2G - N-Acetyl-D-glucosamine (NAG precursor)
+NAG - N-Acetyl-D-glucosamine
+BMA - Beta-D-mannose
+MAN - Alpha-D-mannose
+GAL - Galactose
+GLC - Glucose
+FUC - Alpha-L-fucose
+SIA - Sialic acid (Neu5Ac)
+BGC - Beta-D-glucose
+
+## LIPID COFACTORS
+LPX - Lipid X / Lipid A
+CDL - Cardiolipin
+PLC - Dipalmitoylphosphatidylcholine
+PE  - Phosphatidylethanolamine
+PS  - Phosphatidylserine
+
+## OTHER COMMON COFACTORS & SUBSTRATES
+GSH - Glutathione (reduced)
+GDS - Oxidized glutathione (GSSG)
+HEZ - Hexanoic acid
+CRO - Chromophore (e.g., GFP)
+AKG - Alpha-ketoglutarate (2-Oxoglutarate)
+OAA - Oxaloacetate
+PYR - Pyruvate
+MAL - Malate
+FUM - Fumarate
+CIT - Citrate (also used as buffer)
+IPE - Isopentenyl diphosphate
+FPP - Farnesyl diphosphate
+GPP - Geranyl diphosphate

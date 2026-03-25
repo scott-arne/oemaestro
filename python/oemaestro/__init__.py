@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.1.1"
-__version_info__ = (0, 1, 1)
+__version__ = "0.2.0"
+__version_info__ = (0, 2, 0)
 
 
 def _ensure_library_compat():
@@ -155,6 +155,9 @@ from .oemaestro import (
     OEMaestroReader as _CppOEMaestroReader,
     # Single-mol read
     OEReadMaestro as _CppOEReadMaestro,
+    # DU reader
+    OEMaestroDesignUnitReader as _CppOEMaestroDesignUnitReader,
+    OEReadMaestroDesignUnit as _CppOEReadMaestroDesignUnit,
 )
 
 
@@ -261,6 +264,132 @@ def OEReadMaestro(source, mol=None, config=None):
     return OEMaestroReader(source, config=config)
 
 
+class OEMaestroDesignUnitReader:
+    """High-level Python reader for Maestro files as design units.
+
+    Wraps the C++ OEMaestroDesignUnitReader and provides Pythonic iteration.
+    Each iteration yields an ``oechem.OEDesignUnit`` populated from one CT block.
+
+    :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
+    :param config: Optional OEMaestroReaderConfig for tag format and perception.
+
+    Example::
+
+        from oemaestro import OEMaestroDesignUnitReader
+        for du in OEMaestroDesignUnitReader("prepared.mae"):
+            protein = oechem.OEGraphMol()
+            du.GetProtein(protein)
+            print(protein.NumAtoms())
+    """
+
+    def __init__(self, source, config=None):
+        if config is not None:
+            self._reader = _CppOEMaestroDesignUnitReader(source, config)
+        else:
+            self._reader = _CppOEMaestroDesignUnitReader(source)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        from openeye import oechem
+        du = oechem.OEDesignUnit()
+        if self._reader.Read(du):
+            return du
+        raise StopIteration
+
+    def read(self, du):
+        """Read the next design unit into the provided OEDesignUnit.
+
+        :param du: An OpenEye OEDesignUnit object to populate.
+        :returns: True if a design unit was read, False at EOF.
+        """
+        return self._reader.Read(du)
+
+    def set_ligand_predicate(self, pred):
+        """Override the default ligand atom predicate.
+
+        :param pred: An OpenEye OEUnaryAtomPred object.
+        """
+        self._reader.SetLigandPredicate(pred)
+
+    def set_solvent_predicate(self, pred):
+        """Override the default solvent atom predicate.
+
+        :param pred: An OpenEye OEUnaryAtomPred object.
+        """
+        self._reader.SetSolventPredicate(pred)
+
+    def set_cofactor_predicate(self, pred):
+        """Override the default cofactor atom predicate.
+
+        :param pred: An OpenEye OEUnaryAtomPred object.
+        """
+        self._reader.SetCofactorPredicate(pred)
+
+    def set_perception(self, perception):
+        """Set the perception bitmask.
+
+        :param perception: OEMaestroPerception bitmask value.
+        """
+        self._reader.SetPerception(perception)
+
+    def set_tag_format(self, tags):
+        """Set the tag format bitmask.
+
+        :param tags: OEMaestroTag bitmask value.
+        """
+        self._reader.SetTagFormat(tags)
+
+    def get_perception(self):
+        """Get the current perception bitmask."""
+        return self._reader.GetPerception()
+
+    def get_tag_format(self):
+        """Get the current tag format bitmask."""
+        return self._reader.GetTagFormat()
+
+    def get_config(self):
+        """Get the current reader configuration."""
+        return self._reader.GetConfig()
+
+    def __repr__(self):
+        config = self._reader.GetConfig()
+        return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
+
+
+def OEReadMaestroDesignUnit(source, du=None, config=None):
+    """Read design units from a Maestro file.
+
+    When called with a design unit argument, reads a single DU into it
+    and returns True/False. When called without, returns an
+    OEMaestroDesignUnitReader for iteration.
+
+    :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
+    :param du: Optional OEDesignUnit to populate (single-read mode).
+    :param config: Optional OEMaestroReaderConfig.
+    :returns: bool (single-read mode) or OEMaestroDesignUnitReader (iterator mode).
+
+    Example::
+
+        from openeye import oechem
+        from oemaestro import OEReadMaestroDesignUnit
+
+        # Single design unit
+        du = oechem.OEDesignUnit()
+        ok = OEReadMaestroDesignUnit("prepared.mae", du)
+
+        # Iterator
+        for du in OEReadMaestroDesignUnit("multi.mae"):
+            print(du.HasLigand())
+    """
+    if du is not None:
+        if config is not None:
+            return _CppOEReadMaestroDesignUnit(source, du, config)
+        return _CppOEReadMaestroDesignUnit(source, du)
+    return OEMaestroDesignUnitReader(source, config=config)
+
+
 __all__ = [
     "__version__",
     "__version_info__",
@@ -278,4 +407,6 @@ __all__ = [
     # Public API
     "OEMaestroReader",
     "OEReadMaestro",
+    "OEMaestroDesignUnitReader",
+    "OEReadMaestroDesignUnit",
 ]

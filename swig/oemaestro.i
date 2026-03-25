@@ -11,10 +11,21 @@
 #include "oemaestro/MolConverter.h"
 #include "oemaestro/OEMaestroReader.h"
 #include "oemaestro/OEReadMaestro.h"
+#include "oemaestro/ResidueClassifier.h"
+#include "oemaestro/OEMaestroDesignUnitReader.h"
+#include "oemaestro/OEReadMaestroDesignUnit.h"
 
 #include <oechem.h>
+#include <oebio.h>
 
 using namespace OEMaestro;
+
+// Typedef so SWIG-generated code can resolve OEChem::OEUnaryAtomPred.
+// OpenEye headers define this as OESystem::OEUnaryPredicate<OEChem::OEAtomBase>
+// but do not provide a short alias in the OEChem namespace.
+namespace OEChem {
+    typedef OESystem::OEUnaryPredicate<OEChem::OEAtomBase> OEUnaryAtomPred;
+}
 %}
 
 // ============================================================================
@@ -23,6 +34,10 @@ using namespace OEMaestro;
 namespace OEChem {
     class OEMolBase;
     class OEMol;
+    class OEUnaryAtomPred;
+}
+namespace OEBio {
+    class OEDesignUnit;
 }
 
 // ============================================================================
@@ -65,6 +80,34 @@ static void* _oemaestro_extract_swig_ptr(PyObject* obj) {
     void* ptr = ((_SwigPyObjectCompat*)thisAttr)->ptr;
     Py_DECREF(thisAttr);
     return ptr;
+}
+
+static PyObject* _oemaestro_oe_designunit_type = NULL;
+
+static bool _oemaestro_is_oedesignunit(PyObject* obj) {
+    if (!_oemaestro_oe_designunit_type) {
+        PyObject* mod = PyImport_ImportModule("openeye.oechem");
+        if (mod) {
+            _oemaestro_oe_designunit_type = PyObject_GetAttrString(mod, "OEDesignUnit");
+            Py_DECREF(mod);
+        }
+        if (!_oemaestro_oe_designunit_type) return false;
+    }
+    return PyObject_IsInstance(obj, _oemaestro_oe_designunit_type) == 1;
+}
+
+static PyObject* _oemaestro_oe_unaryatompred_type = NULL;
+
+static bool _oemaestro_is_oeunaryatompred(PyObject* obj) {
+    if (!_oemaestro_oe_unaryatompred_type) {
+        PyObject* mod = PyImport_ImportModule("openeye.oechem");
+        if (mod) {
+            _oemaestro_oe_unaryatompred_type = PyObject_GetAttrString(mod, "OEUnaryAtomPred");
+            Py_DECREF(mod);
+        }
+        if (!_oemaestro_oe_unaryatompred_type) return false;
+    }
+    return PyObject_IsInstance(obj, _oemaestro_oe_unaryatompred_type) == 1;
 }
 
 %}
@@ -124,6 +167,58 @@ static void* _oemaestro_extract_swig_ptr(PyObject* obj) {
 // Note: No OEMol& typemap. OpenEye's OEMolWrapper* cannot be reinterpret_cast
 // to OEMol* across SWIG runtimes. We only expose Read(OEMolBase&) which uses
 // the working OEMolBase& typemap above.
+
+// ============================================================================
+// Typemap for OEBio::OEDesignUnit& (non-const)
+// ============================================================================
+%typemap(in) OEBio::OEDesignUnit& (void *argp = 0, int res = 0) {
+    res = SWIG_ConvertPtr($input, &argp, $descriptor, 0);
+    if (!SWIG_IsOK(res)) {
+        if (_oemaestro_is_oedesignunit($input)) {
+            argp = _oemaestro_extract_swig_ptr($input);
+            if (argp) res = SWIG_OK;
+        }
+    }
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "Expected OEDesignUnit object.");
+    }
+    if (!argp) {
+        SWIG_exception_fail(SWIG_NullReferenceError, "Null OEDesignUnit reference.");
+    }
+    $1 = reinterpret_cast< $1_ltype >(argp);
+}
+
+%typemap(typecheck, precedence=10) OEBio::OEDesignUnit& {
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr($input, &vptr, $descriptor, SWIG_POINTER_NO_NULL);
+    $1 = SWIG_IsOK(res) ? 1 : _oemaestro_is_oedesignunit($input) ? 1 : 0;
+}
+
+// ============================================================================
+// Typemap for const OEChem::OEUnaryAtomPred& (predicate objects)
+// ============================================================================
+%typemap(in) const OEChem::OEUnaryAtomPred& (void *argp = 0, int res = 0) {
+    res = SWIG_ConvertPtr($input, &argp, $descriptor, 0);
+    if (!SWIG_IsOK(res)) {
+        if (_oemaestro_is_oeunaryatompred($input)) {
+            argp = _oemaestro_extract_swig_ptr($input);
+            if (argp) res = SWIG_OK;
+        }
+    }
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "Expected OEUnaryAtomPred object.");
+    }
+    if (!argp) {
+        SWIG_exception_fail(SWIG_NullReferenceError, "Null OEUnaryAtomPred reference.");
+    }
+    $1 = reinterpret_cast< $1_ltype >(argp);
+}
+
+%typemap(typecheck, precedence=10) const OEChem::OEUnaryAtomPred& {
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr($input, &vptr, $descriptor, SWIG_POINTER_NO_NULL);
+    $1 = SWIG_IsOK(res) ? 1 : _oemaestro_is_oeunaryatompred($input) ? 1 : 0;
+}
 
 // ============================================================================
 // STL typemaps
@@ -221,6 +316,7 @@ struct MaestroAtom {
     std::string insert_code;
     double bfactor;
     double occupancy;
+    bool is_ligand_atom;
     std::map<std::string, std::string> properties;
 };
 
@@ -317,6 +413,45 @@ bool OEReadMaestro(const std::string& filename, OEChem::OEMolBase& mol,
 // Note: iterator-returning overloads NOT exposed (move-only return)
 // Note: oeifstream overloads NOT exposed (handled in __init__.py)
 
+// ============================================================================
+// OEMaestroDesignUnitReader
+// ============================================================================
+
+%ignore OEMaestroDesignUnitReader(const OEMaestroDesignUnitReader&);
+%ignore OEMaestroDesignUnitReader::operator=(const OEMaestroDesignUnitReader&);
+%ignore OEMaestroDesignUnitReader::operator=(OEMaestroDesignUnitReader&&);
+
+class OEMaestroDesignUnitReader {
+public:
+    explicit OEMaestroDesignUnitReader(const std::string& filename,
+                                       OEMaestroReaderConfig config = OEMaestroReaderConfig());
+    // Note: oeifstream constructor not exposed to Python (handled in __init__.py)
+
+    bool Read(OEBio::OEDesignUnit& du);
+
+    void SetLigandPredicate(const OEChem::OEUnaryAtomPred& pred);
+    void SetSolventPredicate(const OEChem::OEUnaryAtomPred& pred);
+    void SetCofactorPredicate(const OEChem::OEUnaryAtomPred& pred);
+
+    void SetPerception(OEMaestroPerception perception);
+    void SetTagFormat(OEMaestroTag tags);
+    OEMaestroPerception GetPerception() const;
+    OEMaestroTag GetTagFormat() const;
+    OEMaestroReaderConfig GetConfig() const;
+
+    ~OEMaestroDesignUnitReader();
+    OEMaestroDesignUnitReader(OEMaestroDesignUnitReader&&) noexcept;
+};
+
+// ============================================================================
+// Single-DU OEReadMaestroDesignUnit (SWIG-exposed overloads)
+// ============================================================================
+bool OEReadMaestroDesignUnit(const std::string& filename,
+                              OEBio::OEDesignUnit& du,
+                              OEMaestroReaderConfig config = OEMaestroReaderConfig());
+// Note: iterator-returning overloads NOT exposed (move-only return)
+// Note: oeifstream overloads NOT exposed (handled in __init__.py)
+
 } // namespace OEMaestro
 
 // ============================================================================
@@ -341,5 +476,13 @@ def __repr__(self):
 def __repr__(self):
     config = self.GetConfig()
     return f"OEMaestroReader(tags={config.tags}, perception={config.perception})"
+%}
+}
+
+%extend OEMaestro::OEMaestroDesignUnitReader {
+%pythoncode %{
+def __repr__(self):
+    config = self.GetConfig()
+    return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
 %}
 }

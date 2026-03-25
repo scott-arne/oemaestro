@@ -54,6 +54,10 @@ void MolConverter::Convert(const MaestroMol& maestro_mol, OEChem::OEMolBase& mol
         }
         OEChem::OEAtomSetResidue(oeatom, res);
 
+        if (atom.is_ligand_atom) {
+            oeatom->SetBoolData("is_ligand_atom", true);
+        }
+
         atom_ptrs.push_back(oeatom);
     }
 

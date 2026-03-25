@@ -23,6 +23,7 @@ struct MaestroAtom {
     double bfactor = 0.0;         ///< B-factor (temperature factor)
     double occupancy = 1.0;       ///< Occupancy
     int secondary_structure = -1; ///< Maestro secondary structure (0=loop, 1=helix, 2=strand, -1=unset)
+    bool is_ligand_atom = false;  ///< True if Maestro i_psp_ligand_atom == 1
     std::map<std::string, std::string> properties;  ///< Additional atom-level properties
 };
 

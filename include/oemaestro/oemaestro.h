@@ -4,9 +4,9 @@
 /** @brief Major version number */
 #define OEMAESTRO_VERSION_MAJOR 0
 /** @brief Minor version number */
-#define OEMAESTRO_VERSION_MINOR 1
+#define OEMAESTRO_VERSION_MINOR 2
 /** @brief Patch version number */
-#define OEMAESTRO_VERSION_PATCH 1
+#define OEMAESTRO_VERSION_PATCH 0
 
 #include "oemaestro/Error.h"
 #include "oemaestro/Enums.h"
@@ -16,7 +16,8 @@
 #include "oemaestro/StreamAdapter.h"
 #include "oemaestro/OEMaestroReader.h"
 #include "oemaestro/OEReadMaestro.h"
-
-// Umbrella header — includes will be added as components are built
+#include "oemaestro/ResidueClassifier.h"
+#include "oemaestro/OEMaestroDesignUnitReader.h"
+#include "oemaestro/OEReadMaestroDesignUnit.h"
 
 #endif // OEMAESTRO_OEMAESTRO_H
