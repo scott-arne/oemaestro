@@ -36,6 +36,8 @@ enum OEMaestroPerception : unsigned int {
     PERCEPTION_FORMAL_CHARGES     = 0x10,
     PERCEPTION_ALL                = PERCEPTION_CONNECTIVITY | PERCEPTION_RINGS
                                   | PERCEPTION_BOND_ORDERS | PERCEPTION_IMPLICIT_HYDROGENS
+                                  | PERCEPTION_FORMAL_CHARGES,
+    PERCEPTION_DEFAULT            = PERCEPTION_RINGS | PERCEPTION_IMPLICIT_HYDROGENS
                                   | PERCEPTION_FORMAL_CHARGES
 };
 
@@ -55,7 +57,7 @@ inline OEMaestroPerception operator~(OEMaestroPerception a) {
 /// Reader configuration combining tag format and perception.
 struct OEMaestroReaderConfig {
     OEMaestroTag tags = TAG_ALL;
-    OEMaestroPerception perception = PERCEPTION_ALL;
+    OEMaestroPerception perception = PERCEPTION_DEFAULT;
 };
 
 }  // namespace OEMaestro

@@ -275,7 +275,8 @@ enum OEMaestroPerception : unsigned int {
     PERCEPTION_BOND_ORDERS        = 0x4,
     PERCEPTION_IMPLICIT_HYDROGENS = 0x8,
     PERCEPTION_FORMAL_CHARGES     = 0x10,
-    PERCEPTION_ALL                = 0x1f
+    PERCEPTION_ALL                = 0x1f,
+    PERCEPTION_DEFAULT            = 0x1a
 };
 
 struct OEMaestroReaderConfig {

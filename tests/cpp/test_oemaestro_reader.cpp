@@ -114,3 +114,13 @@ TEST(OEReadMaestroTest, SingleMolEOF) {
     }
     EXPECT_FALSE(ok);
 }
+
+TEST(OEMaestroReaderTest, DefaultPerceptionIsReduced) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    EXPECT_EQ(cfg.perception, OEMaestro::PERCEPTION_DEFAULT);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_RINGS);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_IMPLICIT_HYDROGENS);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_FORMAL_CHARGES);
+    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_CONNECTIVITY);
+    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_BOND_ORDERS);
+}
