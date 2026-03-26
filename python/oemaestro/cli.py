@@ -259,9 +259,9 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
         sys.exit(1)
 
     config = OEMaestroReaderConfig()
-    config.tags = _parse_tag_flags(tags)
-    config.perception = _parse_perception_flags(perception)
-    config.num_threads = threads
+    config.SetTags(_parse_tag_flags(tags))
+    config.SetPerception(_parse_perception_flags(perception))
+    config.SetNumThreads(threads)
 
     reader = OEMaestroReader(str(input_path), config=config)
     ct_conf_test = _build_conf_test(conf_test)

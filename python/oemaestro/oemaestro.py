@@ -451,12 +451,27 @@ PERCEPTION_DEFAULT = _oemaestro.PERCEPTION_DEFAULT
 class OEMaestroReaderConfig(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
-    tags = property(_oemaestro.OEMaestroReaderConfig_tags_get, _oemaestro.OEMaestroReaderConfig_tags_set)
-    perception = property(_oemaestro.OEMaestroReaderConfig_perception_get, _oemaestro.OEMaestroReaderConfig_perception_set)
-    num_threads = property(_oemaestro.OEMaestroReaderConfig_num_threads_get, _oemaestro.OEMaestroReaderConfig_num_threads_set)
 
-    def __init__(self):
-        _oemaestro.OEMaestroReaderConfig_swiginit(self, _oemaestro.new_OEMaestroReaderConfig())
+    def __init__(self, *args):
+        _oemaestro.OEMaestroReaderConfig_swiginit(self, _oemaestro.new_OEMaestroReaderConfig(*args))
+
+    def SetTags(self, tags):
+        return _oemaestro.OEMaestroReaderConfig_SetTags(self, tags)
+
+    def GetTags(self):
+        return _oemaestro.OEMaestroReaderConfig_GetTags(self)
+
+    def SetPerception(self, perception):
+        return _oemaestro.OEMaestroReaderConfig_SetPerception(self, perception)
+
+    def GetPerception(self):
+        return _oemaestro.OEMaestroReaderConfig_GetPerception(self)
+
+    def SetNumThreads(self, num_threads):
+        return _oemaestro.OEMaestroReaderConfig_SetNumThreads(self, num_threads)
+
+    def GetNumThreads(self):
+        return _oemaestro.OEMaestroReaderConfig_GetNumThreads(self)
     __swig_destroy__ = _oemaestro.delete_OEMaestroReaderConfig
 
 # Register OEMaestroReaderConfig in _oemaestro:
@@ -625,7 +640,7 @@ class OEMaestroReader(object):
 
     def __repr__(self):
         config = self.GetConfig()
-        return f"OEMaestroReader(tags={config.tags}, perception={config.perception})"
+        return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
 # Register OEMaestroReader in _oemaestro:
@@ -670,7 +685,7 @@ class OEMaestroDesignUnitReader(object):
 
     def __repr__(self):
         config = self.GetConfig()
-        return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
+        return f"OEMaestroDesignUnitReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
 # Register OEMaestroDesignUnitReader in _oemaestro:

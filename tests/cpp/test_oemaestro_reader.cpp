@@ -63,12 +63,12 @@ TEST(OEMaestroReaderTest, SetTagFormatAfterConstruction) {
 
 TEST(OEMaestroReaderTest, GetConfig) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.tags = OEMaestro::TAG_NAME;
-    cfg.perception = OEMaestro::PERCEPTION_NONE;
+    cfg.SetTags(OEMaestro::TAG_NAME);
+    cfg.SetPerception(OEMaestro::PERCEPTION_NONE);
     OEMaestro::OEMaestroReader reader(DATA_DIR + "/simple.mae", cfg);
     auto config = reader.GetConfig();
-    EXPECT_EQ(config.tags, OEMaestro::TAG_NAME);
-    EXPECT_EQ(config.perception, OEMaestro::PERCEPTION_NONE);
+    EXPECT_EQ(config.GetTags(), OEMaestro::TAG_NAME);
+    EXPECT_EQ(config.GetPerception(), OEMaestro::PERCEPTION_NONE);
 }
 
 TEST(OEMaestroReaderTest, GzipFile) {
@@ -117,23 +117,23 @@ TEST(OEReadMaestroTest, SingleMolEOF) {
 
 TEST(OEMaestroReaderTest, ConfigNumThreadsDefault) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    EXPECT_EQ(cfg.num_threads, 1u);
+    EXPECT_EQ(cfg.GetNumThreads(), 1u);
 }
 
 TEST(OEMaestroReaderTest, ConfigNumThreadsZeroTreatedAsOne) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 0;
+    cfg.SetNumThreads(0);
     OEMaestro::OEMaestroReader reader(std::string(TEST_DATA_DIR) + "/simple.mae", cfg);
     auto config = reader.GetConfig();
-    EXPECT_EQ(config.num_threads, 1u);
+    EXPECT_EQ(config.GetNumThreads(), 1u);
 }
 
 TEST(OEMaestroReaderTest, DefaultPerceptionIsReduced) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    EXPECT_EQ(cfg.perception, OEMaestro::PERCEPTION_DEFAULT);
-    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_RINGS);
-    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_IMPLICIT_HYDROGENS);
-    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_FORMAL_CHARGES);
-    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_CONNECTIVITY);
-    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_BOND_ORDERS);
+    EXPECT_EQ(cfg.GetPerception(), OEMaestro::PERCEPTION_DEFAULT);
+    EXPECT_TRUE(cfg.GetPerception() & OEMaestro::PERCEPTION_RINGS);
+    EXPECT_TRUE(cfg.GetPerception() & OEMaestro::PERCEPTION_IMPLICIT_HYDROGENS);
+    EXPECT_TRUE(cfg.GetPerception() & OEMaestro::PERCEPTION_FORMAL_CHARGES);
+    EXPECT_FALSE(cfg.GetPerception() & OEMaestro::PERCEPTION_CONNECTIVITY);
+    EXPECT_FALSE(cfg.GetPerception() & OEMaestro::PERCEPTION_BOND_ORDERS);
 }

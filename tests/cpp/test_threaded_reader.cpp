@@ -33,9 +33,9 @@ static std::vector<unsigned int> read_all_atom_counts(const std::string& path,
 TEST(ThreadedReaderTest, IdenticalResultsMultiFile) {
     std::string path = DATA_DIR + "/multi.mae";
     OEMaestro::OEMaestroReaderConfig cfg1;
-    cfg1.num_threads = 1;
+    cfg1.SetNumThreads(1);
     OEMaestro::OEMaestroReaderConfig cfg4;
-    cfg4.num_threads = 4;
+    cfg4.SetNumThreads(4);
 
     auto titles1 = read_all_titles(path, cfg1);
     auto titles4 = read_all_titles(path, cfg4);
@@ -55,9 +55,9 @@ TEST(ThreadedReaderTest, IdenticalResultsMultiFile) {
 TEST(ThreadedReaderTest, IdenticalResultsProtein) {
     std::string path = DATA_DIR + "/protein.mae";
     OEMaestro::OEMaestroReaderConfig cfg1;
-    cfg1.num_threads = 1;
+    cfg1.SetNumThreads(1);
     OEMaestro::OEMaestroReaderConfig cfg4;
-    cfg4.num_threads = 4;
+    cfg4.SetNumThreads(4);
 
     auto titles1 = read_all_titles(path, cfg1);
     auto titles4 = read_all_titles(path, cfg4);
@@ -67,12 +67,12 @@ TEST(ThreadedReaderTest, IdenticalResultsProtein) {
 TEST(ThreadedReaderTest, OrderPreserved) {
     std::string path = DATA_DIR + "/multi.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 4;
+    cfg.SetNumThreads(4);
 
     auto titles = read_all_titles(path, cfg);
     ASSERT_EQ(titles.size(), 2u);
     OEMaestro::OEMaestroReaderConfig cfg1;
-    cfg1.num_threads = 1;
+    cfg1.SetNumThreads(1);
     auto titles1 = read_all_titles(path, cfg1);
     EXPECT_EQ(titles[0], titles1[0]);
     EXPECT_EQ(titles[1], titles1[1]);
@@ -81,7 +81,7 @@ TEST(ThreadedReaderTest, OrderPreserved) {
 TEST(ThreadedReaderTest, ReadMolBase) {
     std::string path = DATA_DIR + "/multi.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 4;
+    cfg.SetNumThreads(4);
     OEMaestro::OEMaestroReader reader(path, cfg);
     OEChem::OEGraphMol mol;
     int count = 0;
@@ -92,7 +92,7 @@ TEST(ThreadedReaderTest, ReadMolBase) {
 TEST(ThreadedReaderTest, MoreThreadsThanCTs) {
     std::string path = DATA_DIR + "/simple.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 8;
+    cfg.SetNumThreads(8);
     OEMaestro::OEMaestroReader reader(path, cfg);
     OEChem::OEMol mol;
     ASSERT_TRUE(reader.Read(mol));
@@ -103,7 +103,7 @@ TEST(ThreadedReaderTest, MoreThreadsThanCTs) {
 TEST(ThreadedReaderTest, EarlyDestruction) {
     std::string path = DATA_DIR + "/multi.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 4;
+    cfg.SetNumThreads(4);
     {
         OEMaestro::OEMaestroReader reader(path, cfg);
         OEChem::OEMol mol;
@@ -115,7 +115,7 @@ TEST(ThreadedReaderTest, EarlyDestruction) {
 TEST(ThreadedReaderTest, SetPerceptionThrowsWhenThreaded) {
     std::string path = DATA_DIR + "/simple.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 4;
+    cfg.SetNumThreads(4);
     OEMaestro::OEMaestroReader reader(path, cfg);
     EXPECT_THROW(reader.SetPerception(OEMaestro::PERCEPTION_NONE), std::logic_error);
     EXPECT_THROW(reader.SetTagFormat(OEMaestro::TAG_NAME), std::logic_error);
@@ -124,7 +124,7 @@ TEST(ThreadedReaderTest, SetPerceptionThrowsWhenThreaded) {
 TEST(ThreadedReaderTest, SingleThreadUnchanged) {
     std::string path = DATA_DIR + "/simple.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 1;
+    cfg.SetNumThreads(1);
     OEMaestro::OEMaestroReader reader(path, cfg);
     OEChem::OEMol mol;
     ASSERT_TRUE(reader.Read(mol));
@@ -136,7 +136,7 @@ TEST(ThreadedReaderTest, SingleThreadUnchanged) {
 TEST(ThreadedReaderTest, ConformerGroupingThreaded) {
     std::string path = DATA_DIR + "/conformers.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.num_threads = 4;
+    cfg.SetNumThreads(4);
     OEMaestro::OEMaestroReader reader(path, cfg);
     reader.SetConfTest(new OEChem::OEIsomericConfTest());
     OEChem::OEMol mol;

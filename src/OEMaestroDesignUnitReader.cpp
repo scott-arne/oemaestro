@@ -57,7 +57,7 @@ struct OEMaestroDesignUnitReader::Impl {
     OEAtomPredPtr cofactor_pred;
 
     Impl(const std::string& filename, OEMaestroReaderConfig config)
-        : converter(config.tags, config.perception),
+        : converter(config.GetTags(), config.GetPerception()),
           ligand_pred(std::make_unique<IsLigandAtom>()),
           solvent_pred(std::make_unique<IsSolventAtom>()),
           cofactor_pred(std::make_unique<IsCofactorAtom>()) {
@@ -65,7 +65,7 @@ struct OEMaestroDesignUnitReader::Impl {
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
-        : converter(config.tags, config.perception),
+        : converter(config.GetTags(), config.GetPerception()),
           ligand_pred(std::make_unique<IsLigandAtom>()),
           solvent_pred(std::make_unique<IsSolventAtom>()),
           cofactor_pred(std::make_unique<IsCofactorAtom>()) {
@@ -147,7 +147,7 @@ OEMaestroTag OEMaestroDesignUnitReader::GetTagFormat() const {
 }
 
 OEMaestroReaderConfig OEMaestroDesignUnitReader::GetConfig() const {
-    return {pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception()};
+    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception());
 }
 
 OEMaestroDesignUnitReader::~OEMaestroDesignUnitReader() = default;

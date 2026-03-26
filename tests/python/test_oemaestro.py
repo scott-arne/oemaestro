@@ -67,8 +67,8 @@ class TestOEMaestroReader:
     def test_with_config(self, data_dir):
         from oemaestro import OEMaestroReader, OEMaestroReaderConfig, TAG_NAME, PERCEPTION_NONE
         config = OEMaestroReaderConfig()
-        config.tags = TAG_NAME
-        config.perception = PERCEPTION_NONE
+        config.SetTags(TAG_NAME)
+        config.SetPerception(PERCEPTION_NONE)
         reader = OEMaestroReader(f"{data_dir}/simple.mae", config=config)
         mol = next(iter(reader))
         assert mol.NumAtoms() == 9
@@ -91,7 +91,7 @@ class TestOEReadMaestro:
     def test_single_mol_with_config(self, data_dir):
         from oemaestro import OEReadMaestro, OEMaestroReaderConfig, PERCEPTION_NONE
         config = OEMaestroReaderConfig()
-        config.perception = PERCEPTION_NONE
+        config.SetPerception(PERCEPTION_NONE)
         mol = oechem.OEGraphMol()
         ok = OEReadMaestro(f"{data_dir}/simple.mae", mol, config=config)
         assert ok
@@ -504,20 +504,20 @@ class TestThreadedReading:
         """Verify num_threads passes through to C++ reader."""
         from oemaestro import OEMaestroReaderConfig
         cfg = OEMaestroReaderConfig()
-        assert cfg.num_threads == 1
-        cfg.num_threads = 4
-        assert cfg.num_threads == 4
+        assert cfg.GetNumThreads() == 1
+        cfg.SetNumThreads(4)
+        assert cfg.GetNumThreads() == 4
 
     def test_threaded_reader_reads_molecules(self, data_dir):
         """Verify threaded reader produces same results as single-threaded."""
         from oemaestro import OEMaestroReader, OEMaestroReaderConfig
 
         cfg1 = OEMaestroReaderConfig()
-        cfg1.num_threads = 1
+        cfg1.SetNumThreads(1)
         titles1 = [mol.GetTitle() for mol in OEMaestroReader(f"{data_dir}/multi.mae", cfg1)]
 
         cfg4 = OEMaestroReaderConfig()
-        cfg4.num_threads = 4
+        cfg4.SetNumThreads(4)
         titles4 = [mol.GetTitle() for mol in OEMaestroReader(f"{data_dir}/multi.mae", cfg4)]
 
         assert titles1 == titles4

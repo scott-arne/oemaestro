@@ -279,11 +279,20 @@ enum OEMaestroPerception : unsigned int {
     PERCEPTION_DEFAULT            = 0x1a
 };
 
-struct OEMaestroReaderConfig {
-    OEMaestroTag tags;
-    OEMaestroPerception perception;
-    unsigned int num_threads;
+class OEMaestroReaderConfig {
+public:
     OEMaestroReaderConfig();
+    OEMaestroReaderConfig(OEMaestroTag tags, OEMaestroPerception perception,
+                          unsigned int num_threads = 1);
+
+    void SetTags(OEMaestroTag tags);
+    OEMaestroTag GetTags() const;
+
+    void SetPerception(OEMaestroPerception perception);
+    OEMaestroPerception GetPerception() const;
+
+    void SetNumThreads(unsigned int num_threads);
+    unsigned int GetNumThreads() const;
 };
 
 // ============================================================================
@@ -479,7 +488,7 @@ def __repr__(self):
 %pythoncode %{
 def __repr__(self):
     config = self.GetConfig()
-    return f"OEMaestroReader(tags={config.tags}, perception={config.perception})"
+    return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 %}
 }
 
@@ -487,6 +496,6 @@ def __repr__(self):
 %pythoncode %{
 def __repr__(self):
     config = self.GetConfig()
-    return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
+    return f"OEMaestroDesignUnitReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 %}
 }

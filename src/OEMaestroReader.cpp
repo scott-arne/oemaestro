@@ -35,17 +35,17 @@ struct OEMaestroReader::Impl {
     std::shared_ptr<std::atomic<unsigned int>> active_workers_;
 
     Impl(const std::string& filename, OEMaestroReaderConfig config)
-        : converter(config.tags, config.perception),
+        : converter(config.GetTags(), config.GetPerception()),
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()),
-          num_threads_((config.num_threads == 0) ? 1 : config.num_threads) {
+          num_threads_((config.GetNumThreads() == 0) ? 1 : config.GetNumThreads()) {
         reader = std::make_unique<MaestroReader>(filename);
         if (num_threads_ > 1) StartThreads();
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
-        : converter(config.tags, config.perception),
+        : converter(config.GetTags(), config.GetPerception()),
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()),
-          num_threads_((config.num_threads == 0) ? 1 : config.num_threads) {
+          num_threads_((config.GetNumThreads() == 0) ? 1 : config.GetNumThreads()) {
         reader = std::make_unique<MaestroReader>(make_maeparser_stream(ifs));
         if (num_threads_ > 1) StartThreads();
     }
@@ -259,7 +259,7 @@ OEMaestroTag OEMaestroReader::GetTagFormat() const {
 }
 
 OEMaestroReaderConfig OEMaestroReader::GetConfig() const {
-    return {pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception(), pimpl_->num_threads_};
+    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception(), pimpl_->num_threads_);
 }
 
 OEMaestroReader::~OEMaestroReader() = default;

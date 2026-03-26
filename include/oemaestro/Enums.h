@@ -55,10 +55,27 @@ inline OEMaestroPerception operator~(OEMaestroPerception a) {
 }
 
 /// Reader configuration combining tag format and perception.
-struct OEMaestroReaderConfig {
-    OEMaestroTag tags = TAG_ALL;
-    OEMaestroPerception perception = PERCEPTION_DEFAULT;
-    unsigned int num_threads = 1;
+class OEMaestroReaderConfig {
+public:
+    OEMaestroReaderConfig() = default;
+
+    OEMaestroReaderConfig(OEMaestroTag tags, OEMaestroPerception perception,
+                          unsigned int num_threads = 1)
+        : tags_(tags), perception_(perception), num_threads_(num_threads) {}
+
+    void SetTags(OEMaestroTag tags) { tags_ = tags; }
+    OEMaestroTag GetTags() const { return tags_; }
+
+    void SetPerception(OEMaestroPerception perception) { perception_ = perception; }
+    OEMaestroPerception GetPerception() const { return perception_; }
+
+    void SetNumThreads(unsigned int num_threads) { num_threads_ = num_threads; }
+    unsigned int GetNumThreads() const { return num_threads_; }
+
+private:
+    OEMaestroTag tags_ = TAG_ALL;
+    OEMaestroPerception perception_ = PERCEPTION_DEFAULT;
+    unsigned int num_threads_ = 1;
 };
 
 }  // namespace OEMaestro

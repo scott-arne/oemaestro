@@ -166,10 +166,10 @@ TEST(DesignUnitReaderTest, TagFormatConfig) {
 
 TEST(DesignUnitReaderTest, GetConfig) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.tags = OEMaestro::TAG_NAME;
-    cfg.perception = OEMaestro::PERCEPTION_NONE;
+    cfg.SetTags(OEMaestro::TAG_NAME);
+    cfg.SetPerception(OEMaestro::PERCEPTION_NONE);
     OEMaestro::OEMaestroDesignUnitReader reader(DATA_DIR + "/simple.mae", cfg);
     auto config = reader.GetConfig();
-    EXPECT_EQ(config.tags, OEMaestro::TAG_NAME);
-    EXPECT_EQ(config.perception, OEMaestro::PERCEPTION_NONE);
+    EXPECT_EQ(config.GetTags(), OEMaestro::TAG_NAME);
+    EXPECT_EQ(config.GetPerception(), OEMaestro::PERCEPTION_NONE);
 }

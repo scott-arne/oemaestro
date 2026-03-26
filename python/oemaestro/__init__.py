@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.3.0"
-__version_info__ = (0, 3, 0)
+__version__ = "0.4.0"
+__version_info__ = (0, 4, 0)
 
 
 def _ensure_library_compat():
@@ -171,6 +171,7 @@ class OEMaestroReader:
 
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param config: Optional OEMaestroReaderConfig for tag format and perception.
+    :param num_threads: Number of threads for parallel reading (default 1).
 
     Example::
 
@@ -179,9 +180,13 @@ class OEMaestroReader:
             print(mol.GetTitle(), mol.NumAtoms())
     """
 
-    def __init__(self, source, config=None):
+    def __init__(self, source, config=None, num_threads=1):
         from openeye import oechem
         self._oechem = oechem
+        if num_threads != 1:
+            if config is None:
+                config = OEMaestroReaderConfig()
+            config.SetNumThreads(num_threads)
         if config is not None:
             self._reader = _CppOEMaestroReader(source, config)
         else:
@@ -270,10 +275,10 @@ class OEMaestroReader:
 
     def __repr__(self):
         config = self._reader.GetConfig()
-        return f"OEMaestroReader(tags={config.tags}, perception={config.perception})"
+        return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
-def OEReadMaestro(source, mol=None, config=None):
+def OEReadMaestro(source, mol=None, config=None, num_threads=1):
     """Read molecules from a Maestro file.
 
     When called with a molecule argument, reads a single molecule into it
@@ -283,6 +288,7 @@ def OEReadMaestro(source, mol=None, config=None):
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param mol: Optional OEMolBase to populate (single-read mode).
     :param config: Optional OEMaestroReaderConfig.
+    :param num_threads: Number of threads for parallel reading (default 1).
     :returns: bool (single-read mode) or OEMaestroReader (iterator mode).
 
     Example::
@@ -298,6 +304,10 @@ def OEReadMaestro(source, mol=None, config=None):
         for mol in OEReadMaestro("multi.mae"):
             print(mol.NumAtoms())
     """
+    if num_threads != 1:
+        if config is None:
+            config = OEMaestroReaderConfig()
+        config.SetNumThreads(num_threads)
     if mol is not None:
         if config is not None:
             return _CppOEReadMaestro(source, mol, config)
@@ -313,6 +323,7 @@ class OEMaestroDesignUnitReader:
 
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param config: Optional OEMaestroReaderConfig for tag format and perception.
+    :param num_threads: Number of threads for parallel reading (default 1).
 
     Example::
 
@@ -323,9 +334,13 @@ class OEMaestroDesignUnitReader:
             print(protein.NumAtoms())
     """
 
-    def __init__(self, source, config=None):
+    def __init__(self, source, config=None, num_threads=1):
         from openeye import oechem
         self._oechem = oechem
+        if num_threads != 1:
+            if config is None:
+                config = OEMaestroReaderConfig()
+            config.SetNumThreads(num_threads)
         if config is not None:
             self._reader = _CppOEMaestroDesignUnitReader(source, config)
         else:
@@ -397,10 +412,10 @@ class OEMaestroDesignUnitReader:
 
     def __repr__(self):
         config = self._reader.GetConfig()
-        return f"OEMaestroDesignUnitReader(tags={config.tags}, perception={config.perception})"
+        return f"OEMaestroDesignUnitReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
-def OEReadMaestroDesignUnit(source, du=None, config=None):
+def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=1):
     """Read design units from a Maestro file.
 
     When called with a design unit argument, reads a single DU into it
@@ -410,6 +425,7 @@ def OEReadMaestroDesignUnit(source, du=None, config=None):
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param du: Optional OEDesignUnit to populate (single-read mode).
     :param config: Optional OEMaestroReaderConfig.
+    :param num_threads: Number of threads for parallel reading (default 1).
     :returns: bool (single-read mode) or OEMaestroDesignUnitReader (iterator mode).
 
     Example::
@@ -425,6 +441,10 @@ def OEReadMaestroDesignUnit(source, du=None, config=None):
         for du in OEReadMaestroDesignUnit("multi.mae"):
             print(du.HasLigand())
     """
+    if num_threads != 1:
+        if config is None:
+            config = OEMaestroReaderConfig()
+        config.SetNumThreads(num_threads)
     if du is not None:
         if config is not None:
             return _CppOEReadMaestroDesignUnit(source, du, config)

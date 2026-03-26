@@ -89,7 +89,7 @@ multiple threads:
 from oemaestro import OEMaestroReader, OEMaestroReaderConfig
 
 config = OEMaestroReaderConfig()
-config.num_threads = 4
+config.SetNumThreads(4)
 
 for mol in OEMaestroReader("large_library.maegz", config=config):
     process(mol)
@@ -161,7 +161,7 @@ Maestro property keys follow a `type_owner_name` convention (e.g.,
 from oemaestro import OEMaestroReaderConfig, TAG_NAME
 
 config = OEMaestroReaderConfig()
-config.tags = TAG_NAME  # Keep only the property name (e.g., "IC50")
+config.SetTags(TAG_NAME)  # Keep only the property name (e.g., "IC50")
 ```
 
 Options: `TAG_ALL` (default), `TAG_NAME`, `TAG_TYPE`, `TAG_OWNER`, `TAG_NONE`.
@@ -179,7 +179,7 @@ from oemaestro import (
 )
 
 config = OEMaestroReaderConfig()
-config.perception = PERCEPTION_RINGS | PERCEPTION_FORMAL_CHARGES
+config.SetPerception(PERCEPTION_RINGS | PERCEPTION_FORMAL_CHARGES)
 ```
 
 Available steps: `PERCEPTION_CONNECTIVITY`, `PERCEPTION_RINGS`,

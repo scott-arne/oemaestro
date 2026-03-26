@@ -4,7 +4,7 @@
 /** @brief Major version number */
 #define OEMAESTRO_VERSION_MAJOR 0
 /** @brief Minor version number */
-#define OEMAESTRO_VERSION_MINOR 3
+#define OEMAESTRO_VERSION_MINOR 4
 /** @brief Patch version number */
 #define OEMAESTRO_VERSION_PATCH 0
 
