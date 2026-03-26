@@ -13,16 +13,19 @@ struct OEMaestroReader::Impl {
     OEChem::OEMol pending_mol;
     bool has_pending = false;
     MaestroMol maestro_buf;
+    unsigned int num_threads_ = 1;
 
     Impl(const std::string& filename, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()) {
+        num_threads_ = (config.num_threads == 0) ? 1 : config.num_threads;
         reader = std::make_unique<MaestroReader>(filename);
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
         : converter(config.tags, config.perception),
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()) {
+        num_threads_ = (config.num_threads == 0) ? 1 : config.num_threads;
         reader = std::make_unique<MaestroReader>(make_maeparser_stream(ifs));
     }
 
@@ -114,7 +117,7 @@ OEMaestroTag OEMaestroReader::GetTagFormat() const {
 }
 
 OEMaestroReaderConfig OEMaestroReader::GetConfig() const {
-    return {pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception()};
+    return {pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception(), pimpl_->num_threads_};
 }
 
 OEMaestroReader::~OEMaestroReader() = default;

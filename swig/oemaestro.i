@@ -282,6 +282,7 @@ enum OEMaestroPerception : unsigned int {
 struct OEMaestroReaderConfig {
     OEMaestroTag tags;
     OEMaestroPerception perception;
+    unsigned int num_threads;
     OEMaestroReaderConfig();
 };
 

@@ -115,6 +115,19 @@ TEST(OEReadMaestroTest, SingleMolEOF) {
     EXPECT_FALSE(ok);
 }
 
+TEST(OEMaestroReaderTest, ConfigNumThreadsDefault) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    EXPECT_EQ(cfg.num_threads, 1u);
+}
+
+TEST(OEMaestroReaderTest, ConfigNumThreadsZeroTreatedAsOne) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.num_threads = 0;
+    OEMaestro::OEMaestroReader reader(std::string(TEST_DATA_DIR) + "/simple.mae", cfg);
+    auto config = reader.GetConfig();
+    EXPECT_EQ(config.num_threads, 1u);
+}
+
 TEST(OEMaestroReaderTest, DefaultPerceptionIsReduced) {
     OEMaestro::OEMaestroReaderConfig cfg;
     EXPECT_EQ(cfg.perception, OEMaestro::PERCEPTION_DEFAULT);

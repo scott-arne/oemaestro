@@ -58,6 +58,7 @@ inline OEMaestroPerception operator~(OEMaestroPerception a) {
 struct OEMaestroReaderConfig {
     OEMaestroTag tags = TAG_ALL;
     OEMaestroPerception perception = PERCEPTION_DEFAULT;
+    unsigned int num_threads = 1;
 };
 
 }  // namespace OEMaestro
