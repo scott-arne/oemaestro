@@ -14,7 +14,9 @@ add_executable(oemaestro_tests
     cpp/test_mol_converter.cpp
     cpp/test_oemaestro_reader.cpp
     cpp/test_residue_classifier.cpp
+    cpp/test_bounded_queue.cpp
     cpp/test_design_unit_reader.cpp
+    cpp/test_threaded_reader.cpp
 )
 
 target_link_libraries(oemaestro_tests

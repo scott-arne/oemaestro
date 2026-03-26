@@ -497,3 +497,32 @@ class TestMaeVsPdbBondConnectivity:
             f"{len(non_resonance_mismatches)} non-resonance bond order mismatches: "
             f"{non_resonance_mismatches[:5]}"
         )
+
+
+class TestThreadedReading:
+    def test_threaded_reader_config(self):
+        """Verify num_threads passes through to C++ reader."""
+        from oemaestro import OEMaestroReaderConfig
+        cfg = OEMaestroReaderConfig()
+        assert cfg.num_threads == 1
+        cfg.num_threads = 4
+        assert cfg.num_threads == 4
+
+    def test_threaded_reader_reads_molecules(self, data_dir):
+        """Verify threaded reader produces same results as single-threaded."""
+        from oemaestro import OEMaestroReader, OEMaestroReaderConfig
+
+        cfg1 = OEMaestroReaderConfig()
+        cfg1.num_threads = 1
+        titles1 = [mol.GetTitle() for mol in OEMaestroReader(f"{data_dir}/multi.mae", cfg1)]
+
+        cfg4 = OEMaestroReaderConfig()
+        cfg4.num_threads = 4
+        titles4 = [mol.GetTitle() for mol in OEMaestroReader(f"{data_dir}/multi.mae", cfg4)]
+
+        assert titles1 == titles4
+
+    def test_perception_default(self):
+        """Verify PERCEPTION_DEFAULT is accessible from Python."""
+        from oemaestro import PERCEPTION_DEFAULT, PERCEPTION_ALL
+        assert PERCEPTION_DEFAULT != PERCEPTION_ALL

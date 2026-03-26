@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.2.1"
-__version_info__ = (0, 2, 1)
+__version__ = "0.3.0"
+__version_info__ = (0, 3, 0)
 
 
 def _ensure_library_compat():
@@ -144,7 +144,7 @@ from .oemaestro import (
     TAG_NONE, TAG_TYPE, TAG_OWNER, TAG_NAME, TAG_ALL,
     PERCEPTION_NONE, PERCEPTION_CONNECTIVITY, PERCEPTION_RINGS,
     PERCEPTION_BOND_ORDERS, PERCEPTION_IMPLICIT_HYDROGENS,
-    PERCEPTION_FORMAL_CHARGES, PERCEPTION_ALL,
+    PERCEPTION_FORMAL_CHARGES, PERCEPTION_ALL, PERCEPTION_DEFAULT,
     # Config
     OEMaestroReaderConfig,
     # IR types (low-level)
@@ -439,7 +439,7 @@ __all__ = [
     "TAG_NONE", "TAG_TYPE", "TAG_OWNER", "TAG_NAME", "TAG_ALL",
     "PERCEPTION_NONE", "PERCEPTION_CONNECTIVITY", "PERCEPTION_RINGS",
     "PERCEPTION_BOND_ORDERS", "PERCEPTION_IMPLICIT_HYDROGENS",
-    "PERCEPTION_FORMAL_CHARGES", "PERCEPTION_ALL",
+    "PERCEPTION_FORMAL_CHARGES", "PERCEPTION_ALL", "PERCEPTION_DEFAULT",
     # Config
     "OEMaestroReaderConfig",
     # IR types

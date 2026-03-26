@@ -114,3 +114,26 @@ TEST(OEReadMaestroTest, SingleMolEOF) {
     }
     EXPECT_FALSE(ok);
 }
+
+TEST(OEMaestroReaderTest, ConfigNumThreadsDefault) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    EXPECT_EQ(cfg.num_threads, 1u);
+}
+
+TEST(OEMaestroReaderTest, ConfigNumThreadsZeroTreatedAsOne) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.num_threads = 0;
+    OEMaestro::OEMaestroReader reader(std::string(TEST_DATA_DIR) + "/simple.mae", cfg);
+    auto config = reader.GetConfig();
+    EXPECT_EQ(config.num_threads, 1u);
+}
+
+TEST(OEMaestroReaderTest, DefaultPerceptionIsReduced) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    EXPECT_EQ(cfg.perception, OEMaestro::PERCEPTION_DEFAULT);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_RINGS);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_IMPLICIT_HYDROGENS);
+    EXPECT_TRUE(cfg.perception & OEMaestro::PERCEPTION_FORMAL_CHARGES);
+    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_CONNECTIVITY);
+    EXPECT_FALSE(cfg.perception & OEMaestro::PERCEPTION_BOND_ORDERS);
+}

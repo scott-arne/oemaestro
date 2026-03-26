@@ -275,12 +275,14 @@ enum OEMaestroPerception : unsigned int {
     PERCEPTION_BOND_ORDERS        = 0x4,
     PERCEPTION_IMPLICIT_HYDROGENS = 0x8,
     PERCEPTION_FORMAL_CHARGES     = 0x10,
-    PERCEPTION_ALL                = 0x1f
+    PERCEPTION_ALL                = 0x1f,
+    PERCEPTION_DEFAULT            = 0x1a
 };
 
 struct OEMaestroReaderConfig {
     OEMaestroTag tags;
     OEMaestroPerception perception;
+    unsigned int num_threads;
     OEMaestroReaderConfig();
 };
 
@@ -385,6 +387,8 @@ public:
 %ignore OEMaestroReader(const OEMaestroReader&);
 %ignore OEMaestroReader::operator=(const OEMaestroReader&);
 %ignore OEMaestroReader::operator=(OEMaestroReader&&);
+
+%threadallow OEMaestroReader::Read;
 
 class OEMaestroReader {
 public:

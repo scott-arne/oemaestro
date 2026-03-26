@@ -176,8 +176,15 @@ def _parse_perception_flags(values):
     multiple=True,
     help="Only keep SD data tags matching this pattern (supports * wildcards). Can be specified multiple times.",
 )
+@click.option(
+    "--threads",
+    type=int,
+    default=1,
+    show_default=True,
+    help="Number of threads for parallel reading. 1 = sequential (default).",
+)
 def cli(input_file, output_file, tags, perception, conf_test, title_field,
-        count, append, quiet, sd_tag_filter):
+        count, append, quiet, sd_tag_filter, threads):
     """Convert a Maestro file to an OpenEye-supported format.
 
     Reads molecules from INPUT_FILE (.mae, .mae.gz, .maegz) and writes
@@ -254,6 +261,7 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
     config = OEMaestroReaderConfig()
     config.tags = _parse_tag_flags(tags)
     config.perception = _parse_perception_flags(perception)
+    config.num_threads = threads
 
     reader = OEMaestroReader(str(input_path), config=config)
     ct_conf_test = _build_conf_test(conf_test)
