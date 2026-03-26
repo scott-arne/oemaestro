@@ -388,6 +388,8 @@ public:
 %ignore OEMaestroReader::operator=(const OEMaestroReader&);
 %ignore OEMaestroReader::operator=(OEMaestroReader&&);
 
+%threadallow OEMaestroReader::Read;
+
 class OEMaestroReader {
 public:
     explicit OEMaestroReader(const std::string& filename,
