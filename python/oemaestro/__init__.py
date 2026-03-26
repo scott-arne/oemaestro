@@ -20,8 +20,14 @@ import os
 import re
 import warnings
 
-__version__ = "0.4.0"
-__version_info__ = (0, 4, 0)
+__version__ = "0.4.1"
+__version_info__ = (0, 4, 1)
+
+
+def _default_num_threads():
+    """Return min(2, cpu_count), falling back to 1."""
+    ncpu = os.cpu_count() or 1
+    return min(ncpu, 2)
 
 
 def _ensure_library_compat():
@@ -171,7 +177,7 @@ class OEMaestroReader:
 
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param config: Optional OEMaestroReaderConfig for tag format and perception.
-    :param num_threads: Number of threads for parallel reading (default 1).
+    :param num_threads: Number of threads for parallel reading (default min(2, cpu_count)).
 
     Example::
 
@@ -180,10 +186,10 @@ class OEMaestroReader:
             print(mol.GetTitle(), mol.NumAtoms())
     """
 
-    def __init__(self, source, config=None, num_threads=1):
+    def __init__(self, source, config=None, num_threads=None):
         from openeye import oechem
         self._oechem = oechem
-        if num_threads != 1:
+        if num_threads is not None:
             if config is None:
                 config = OEMaestroReaderConfig()
             config.SetNumThreads(num_threads)
@@ -247,20 +253,6 @@ class OEMaestroReader:
         self._conf_test = conf_test
         self._pending = None
 
-    def set_perception(self, perception):
-        """Set the perception bitmask.
-
-        :param perception: OEMaestroPerception bitmask value.
-        """
-        self._reader.SetPerception(perception)
-
-    def set_tag_format(self, tags):
-        """Set the tag format bitmask.
-
-        :param tags: OEMaestroTag bitmask value.
-        """
-        self._reader.SetTagFormat(tags)
-
     def get_perception(self):
         """Get the current perception bitmask."""
         return self._reader.GetPerception()
@@ -278,7 +270,7 @@ class OEMaestroReader:
         return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
-def OEReadMaestro(source, mol=None, config=None, num_threads=1):
+def OEReadMaestro(source, mol=None, config=None, num_threads=None):
     """Read molecules from a Maestro file.
 
     When called with a molecule argument, reads a single molecule into it
@@ -288,7 +280,7 @@ def OEReadMaestro(source, mol=None, config=None, num_threads=1):
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param mol: Optional OEMolBase to populate (single-read mode).
     :param config: Optional OEMaestroReaderConfig.
-    :param num_threads: Number of threads for parallel reading (default 1).
+    :param num_threads: Number of threads for parallel reading (default min(2, cpu_count)).
     :returns: bool (single-read mode) or OEMaestroReader (iterator mode).
 
     Example::
@@ -304,7 +296,7 @@ def OEReadMaestro(source, mol=None, config=None, num_threads=1):
         for mol in OEReadMaestro("multi.mae"):
             print(mol.NumAtoms())
     """
-    if num_threads != 1:
+    if num_threads is not None:
         if config is None:
             config = OEMaestroReaderConfig()
         config.SetNumThreads(num_threads)
@@ -323,7 +315,7 @@ class OEMaestroDesignUnitReader:
 
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param config: Optional OEMaestroReaderConfig for tag format and perception.
-    :param num_threads: Number of threads for parallel reading (default 1).
+    :param num_threads: Number of threads for parallel reading (default min(2, cpu_count)).
 
     Example::
 
@@ -334,10 +326,10 @@ class OEMaestroDesignUnitReader:
             print(protein.NumAtoms())
     """
 
-    def __init__(self, source, config=None, num_threads=1):
+    def __init__(self, source, config=None, num_threads=None):
         from openeye import oechem
         self._oechem = oechem
-        if num_threads != 1:
+        if num_threads is not None:
             if config is None:
                 config = OEMaestroReaderConfig()
             config.SetNumThreads(num_threads)
@@ -384,20 +376,6 @@ class OEMaestroDesignUnitReader:
         """
         self._reader.SetCofactorPredicate(pred)
 
-    def set_perception(self, perception):
-        """Set the perception bitmask.
-
-        :param perception: OEMaestroPerception bitmask value.
-        """
-        self._reader.SetPerception(perception)
-
-    def set_tag_format(self, tags):
-        """Set the tag format bitmask.
-
-        :param tags: OEMaestroTag bitmask value.
-        """
-        self._reader.SetTagFormat(tags)
-
     def get_perception(self):
         """Get the current perception bitmask."""
         return self._reader.GetPerception()
@@ -415,7 +393,7 @@ class OEMaestroDesignUnitReader:
         return f"OEMaestroDesignUnitReader(tags={config.GetTags()}, perception={config.GetPerception()})"
 
 
-def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=1):
+def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=None):
     """Read design units from a Maestro file.
 
     When called with a design unit argument, reads a single DU into it
@@ -425,7 +403,7 @@ def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=1):
     :param source: Path to a Maestro file (.mae, .mae.gz, .maegz).
     :param du: Optional OEDesignUnit to populate (single-read mode).
     :param config: Optional OEMaestroReaderConfig.
-    :param num_threads: Number of threads for parallel reading (default 1).
+    :param num_threads: Number of threads for parallel reading (default min(2, cpu_count)).
     :returns: bool (single-read mode) or OEMaestroDesignUnitReader (iterator mode).
 
     Example::
@@ -441,7 +419,7 @@ def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=1):
         for du in OEReadMaestroDesignUnit("multi.mae"):
             print(du.HasLigand())
     """
-    if num_threads != 1:
+    if num_threads is not None:
         if config is None:
             config = OEMaestroReaderConfig()
         config.SetNumThreads(num_threads)

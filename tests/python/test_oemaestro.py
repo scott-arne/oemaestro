@@ -99,36 +99,36 @@ class TestOEReadMaestro:
 
 
 class TestTagFormatting:
-    def test_set_tag_format(self, data_dir):
-        from oemaestro import OEMaestroReader, TAG_ALL, TAG_NAME
-        reader = OEMaestroReader(f"{data_dir}/protein.mae")
-        reader.set_tag_format(TAG_ALL)
-        assert reader.get_tag_format() == TAG_ALL
-        reader.set_tag_format(TAG_NAME)
+    def test_tag_format_via_config(self, data_dir):
+        from oemaestro import OEMaestroReader, OEMaestroReaderConfig, TAG_NAME
+        cfg = OEMaestroReaderConfig()
+        cfg.SetTags(TAG_NAME)
+        reader = OEMaestroReader(f"{data_dir}/protein.mae", config=cfg)
         assert reader.get_tag_format() == TAG_NAME
 
     def test_tag_none_no_tags(self, data_dir):
-        from oemaestro import OEMaestroReader, TAG_NONE
-        reader = OEMaestroReader(f"{data_dir}/protein.mae")
-        reader.set_tag_format(TAG_NONE)
+        from oemaestro import OEMaestroReader, OEMaestroReaderConfig, TAG_NONE
+        cfg = OEMaestroReaderConfig()
+        cfg.SetTags(TAG_NONE)
+        reader = OEMaestroReader(f"{data_dir}/protein.mae", config=cfg)
         mol = next(iter(reader))
         tags = list(oechem.OEGetSDDataPairs(mol))
         assert len(tags) == 0
 
 
 class TestPerception:
-    def test_set_perception(self, data_dir):
-        from oemaestro import OEMaestroReader, PERCEPTION_NONE, PERCEPTION_ALL
-        reader = OEMaestroReader(f"{data_dir}/simple.mae")
-        reader.set_perception(PERCEPTION_NONE)
+    def test_perception_via_config(self, data_dir):
+        from oemaestro import OEMaestroReader, OEMaestroReaderConfig, PERCEPTION_NONE
+        cfg = OEMaestroReaderConfig()
+        cfg.SetPerception(PERCEPTION_NONE)
+        reader = OEMaestroReader(f"{data_dir}/simple.mae", config=cfg)
         assert reader.get_perception() == PERCEPTION_NONE
-        reader.set_perception(PERCEPTION_ALL)
-        assert reader.get_perception() == PERCEPTION_ALL
 
     def test_perception_none(self, data_dir):
-        from oemaestro import OEMaestroReader, PERCEPTION_NONE
-        reader = OEMaestroReader(f"{data_dir}/simple.mae")
-        reader.set_perception(PERCEPTION_NONE)
+        from oemaestro import OEMaestroReader, OEMaestroReaderConfig, PERCEPTION_NONE
+        cfg = OEMaestroReaderConfig()
+        cfg.SetPerception(PERCEPTION_NONE)
+        reader = OEMaestroReader(f"{data_dir}/simple.mae", config=cfg)
         mol = next(iter(reader))
         assert mol.NumAtoms() > 0
 
@@ -504,7 +504,7 @@ class TestThreadedReading:
         """Verify num_threads passes through to C++ reader."""
         from oemaestro import OEMaestroReaderConfig
         cfg = OEMaestroReaderConfig()
-        assert cfg.GetNumThreads() == 1
+        assert cfg.GetNumThreads() >= 1
         cfg.SetNumThreads(4)
         assert cfg.GetNumThreads() == 4
 

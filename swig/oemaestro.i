@@ -408,8 +408,6 @@ public:
     bool Read(OEChem::OEMol& mol);
     bool Read(OEChem::OEMolBase& mol);
 
-    void SetPerception(OEMaestroPerception perception);
-    void SetTagFormat(OEMaestroTag tags);
     OEMaestroPerception GetPerception() const;
     OEMaestroTag GetTagFormat() const;
     OEMaestroReaderConfig GetConfig() const;
@@ -446,8 +444,6 @@ public:
     void SetSolventPredicate(const OEChem::OEUnaryAtomPred& pred);
     void SetCofactorPredicate(const OEChem::OEUnaryAtomPred& pred);
 
-    void SetPerception(OEMaestroPerception perception);
-    void SetTagFormat(OEMaestroTag tags);
     OEMaestroPerception GetPerception() const;
     OEMaestroTag GetTagFormat() const;
     OEMaestroReaderConfig GetConfig() const;

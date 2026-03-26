@@ -130,14 +130,6 @@ void OEMaestroDesignUnitReader::SetCofactorPredicate(
         static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
-void OEMaestroDesignUnitReader::SetPerception(OEMaestroPerception perception) {
-    pimpl_->converter.SetPerception(perception);
-}
-
-void OEMaestroDesignUnitReader::SetTagFormat(OEMaestroTag tags) {
-    pimpl_->converter.SetTagFormat(tags);
-}
-
 OEMaestroPerception OEMaestroDesignUnitReader::GetPerception() const {
     return pimpl_->converter.GetPerception();
 }

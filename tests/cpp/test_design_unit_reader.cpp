@@ -153,14 +153,16 @@ TEST(DesignUnitReaderTest, CustomLigandPredicate) {
 // --- Config passthrough tests ---
 
 TEST(DesignUnitReaderTest, PerceptionConfig) {
-    OEMaestro::OEMaestroDesignUnitReader reader(DATA_DIR + "/simple.mae");
-    reader.SetPerception(OEMaestro::PERCEPTION_NONE);
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.SetPerception(OEMaestro::PERCEPTION_NONE);
+    OEMaestro::OEMaestroDesignUnitReader reader(DATA_DIR + "/simple.mae", cfg);
     EXPECT_EQ(reader.GetPerception(), OEMaestro::PERCEPTION_NONE);
 }
 
 TEST(DesignUnitReaderTest, TagFormatConfig) {
-    OEMaestro::OEMaestroDesignUnitReader reader(DATA_DIR + "/simple.mae");
-    reader.SetTagFormat(OEMaestro::TAG_NAME);
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.SetTags(OEMaestro::TAG_NAME);
+    OEMaestro::OEMaestroDesignUnitReader reader(DATA_DIR + "/simple.mae", cfg);
     EXPECT_EQ(reader.GetTagFormat(), OEMaestro::TAG_NAME);
 }
 

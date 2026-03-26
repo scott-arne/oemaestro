@@ -1,6 +1,9 @@
 #ifndef OEMAESTRO_ENUMS_H
 #define OEMAESTRO_ENUMS_H
 
+#include <algorithm>
+#include <thread>
+
 namespace OEMaestro {
 
 /// Bitmask controlling data tag name formatting from Maestro t_o_d keys.
@@ -54,13 +57,19 @@ inline OEMaestroPerception operator~(OEMaestroPerception a) {
     return static_cast<OEMaestroPerception>(~static_cast<unsigned>(a));
 }
 
+/// Return min(2, hardware threads), falling back to 1.
+inline unsigned int default_num_threads() {
+    unsigned int hw = std::thread::hardware_concurrency();
+    return (hw == 0) ? 1 : std::min(hw, 2u);
+}
+
 /// Reader configuration combining tag format and perception.
 class OEMaestroReaderConfig {
 public:
     OEMaestroReaderConfig() = default;
 
     OEMaestroReaderConfig(OEMaestroTag tags, OEMaestroPerception perception,
-                          unsigned int num_threads = 1)
+                          unsigned int num_threads = default_num_threads())
         : tags_(tags), perception_(perception), num_threads_(num_threads) {}
 
     void SetTags(OEMaestroTag tags) { tags_ = tags; }
@@ -75,7 +84,7 @@ public:
 private:
     OEMaestroTag tags_ = TAG_ALL;
     OEMaestroPerception perception_ = PERCEPTION_DEFAULT;
-    unsigned int num_threads_ = 1;
+    unsigned int num_threads_ = default_num_threads();
 };
 
 }  // namespace OEMaestro

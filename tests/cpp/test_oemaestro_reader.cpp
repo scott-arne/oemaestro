@@ -46,18 +46,20 @@ TEST(OEMaestroReaderTest, IsomericConfTestGrouping) {
     EXPECT_EQ(mol.NumConfs(), 2);
 }
 
-TEST(OEMaestroReaderTest, SetPerceptionAfterConstruction) {
-    OEMaestro::OEMaestroReader reader(DATA_DIR + "/simple.mae");
-    reader.SetPerception(OEMaestro::PERCEPTION_NONE);
+TEST(OEMaestroReaderTest, PerceptionViaConfig) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.SetPerception(OEMaestro::PERCEPTION_NONE);
+    OEMaestro::OEMaestroReader reader(DATA_DIR + "/simple.mae", cfg);
     EXPECT_EQ(reader.GetPerception(), OEMaestro::PERCEPTION_NONE);
     OEChem::OEMol mol;
     ASSERT_TRUE(reader.Read(mol));
     EXPECT_EQ(mol.NumAtoms(), 9);
 }
 
-TEST(OEMaestroReaderTest, SetTagFormatAfterConstruction) {
-    OEMaestro::OEMaestroReader reader(DATA_DIR + "/simple.mae");
-    reader.SetTagFormat(OEMaestro::TAG_NAME);
+TEST(OEMaestroReaderTest, TagFormatViaConfig) {
+    OEMaestro::OEMaestroReaderConfig cfg;
+    cfg.SetTags(OEMaestro::TAG_NAME);
+    OEMaestro::OEMaestroReader reader(DATA_DIR + "/simple.mae", cfg);
     EXPECT_EQ(reader.GetTagFormat(), OEMaestro::TAG_NAME);
 }
 
@@ -117,7 +119,7 @@ TEST(OEReadMaestroTest, SingleMolEOF) {
 
 TEST(OEMaestroReaderTest, ConfigNumThreadsDefault) {
     OEMaestro::OEMaestroReaderConfig cfg;
-    EXPECT_EQ(cfg.GetNumThreads(), 1u);
+    EXPECT_EQ(cfg.GetNumThreads(), OEMaestro::default_num_threads());
 }
 
 TEST(OEMaestroReaderTest, ConfigNumThreadsZeroTreatedAsOne) {

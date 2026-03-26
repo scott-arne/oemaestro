@@ -619,12 +619,6 @@ class OEMaestroReader(object):
     def Read(self, mol):
         return _oemaestro.OEMaestroReader_Read(self, mol)
 
-    def SetPerception(self, perception):
-        return _oemaestro.OEMaestroReader_SetPerception(self, perception)
-
-    def SetTagFormat(self, tags):
-        return _oemaestro.OEMaestroReader_SetTagFormat(self, tags)
-
     def GetPerception(self):
         return _oemaestro.OEMaestroReader_GetPerception(self)
 
@@ -663,12 +657,6 @@ class OEMaestroDesignUnitReader(object):
 
     def SetCofactorPredicate(self, pred):
         return _oemaestro.OEMaestroDesignUnitReader_SetCofactorPredicate(self, pred)
-
-    def SetPerception(self, perception):
-        return _oemaestro.OEMaestroDesignUnitReader_SetPerception(self, perception)
-
-    def SetTagFormat(self, tags):
-        return _oemaestro.OEMaestroDesignUnitReader_SetTagFormat(self, tags)
 
     def GetPerception(self):
         return _oemaestro.OEMaestroDesignUnitReader_GetPerception(self)

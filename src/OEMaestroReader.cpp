@@ -236,20 +236,6 @@ void OEMaestroReader::SetConfTest(OEChem::OEConfTestBase* conf_test) {
     }
 }
 
-void OEMaestroReader::SetPerception(OEMaestroPerception perception) {
-    if (pimpl_->num_threads_ > 1) {
-        throw std::logic_error("SetPerception() cannot be called in threaded mode");
-    }
-    pimpl_->converter.SetPerception(perception);
-}
-
-void OEMaestroReader::SetTagFormat(OEMaestroTag tags) {
-    if (pimpl_->num_threads_ > 1) {
-        throw std::logic_error("SetTagFormat() cannot be called in threaded mode");
-    }
-    pimpl_->converter.SetTagFormat(tags);
-}
-
 OEMaestroPerception OEMaestroReader::GetPerception() const {
     return pimpl_->converter.GetPerception();
 }

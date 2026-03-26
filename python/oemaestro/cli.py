@@ -179,9 +179,8 @@ def _parse_perception_flags(values):
 @click.option(
     "--threads",
     type=int,
-    default=1,
-    show_default=True,
-    help="Number of threads for parallel reading. 1 = sequential (default).",
+    default=None,
+    help="Number of threads for parallel reading (default: min(2, cpu_count)).",
 )
 def cli(input_file, output_file, tags, perception, conf_test, title_field,
         count, append, quiet, sd_tag_filter, threads):
@@ -261,7 +260,8 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
     config = OEMaestroReaderConfig()
     config.SetTags(_parse_tag_flags(tags))
     config.SetPerception(_parse_perception_flags(perception))
-    config.SetNumThreads(threads)
+    if threads is not None:
+        config.SetNumThreads(threads)
 
     reader = OEMaestroReader(str(input_path), config=config)
     ct_conf_test = _build_conf_test(conf_test)
@@ -291,32 +291,47 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
         for tag in to_remove:
             oechem.OEDeleteSDData(mol, tag)
 
+    from rich.console import Console
+
+    console = Console(stderr=True)
     mol_count = 0
 
-    for mol in reader:
-        if title_field:
-            title = oechem.OEGetSDData(mol, title_field)
-            if title:
-                mol.SetTitle(title)
+    def _status_text():
+        label = "structure" if mol_count == 1 else "structures"
+        return f"[bold cyan]{mol_count:,}[/] {label} written"
 
-        _filter_sd_tags(mol)
-        oechem.OEWriteMolecule(ofs, mol)
-        mol_count += 1
-        if not quiet:
-            info = f"{mol.GetTitle() or '(untitled)'} ({mol.NumAtoms()} atoms"
-            if ct_conf_test is not None:
-                info += f", {mol.NumConfs()} conformer(s)"
-            info += ")"
-            click.echo(f"  Wrote: {info}")
-        if count and mol_count >= count:
-            break
+    if quiet:
+        for mol in reader:
+            if title_field:
+                title = oechem.OEGetSDData(mol, title_field)
+                if title:
+                    mol.SetTitle(title)
+            _filter_sd_tags(mol)
+            oechem.OEWriteMolecule(ofs, mol)
+            mol_count += 1
+            if count and mol_count >= count:
+                break
+    else:
+        with console.status(_status_text(), spinner="dots", spinner_style="cyan") as status:
+            for mol in reader:
+                if title_field:
+                    title = oechem.OEGetSDData(mol, title_field)
+                    if title:
+                        mol.SetTitle(title)
+                _filter_sd_tags(mol)
+                oechem.OEWriteMolecule(ofs, mol)
+                mol_count += 1
+                status.update(_status_text())
+                if count and mol_count >= count:
+                    break
 
     ofs.close()
 
     if not quiet:
-        click.secho(
-            f"\nConverted {mol_count} molecule(s) -> {output_path}",
-            fg="green",
+        label = "structure" if mol_count == 1 else "structures"
+        console.print(
+            f"  [bold green]\u2713[/] [bold]{mol_count:,}[/] {label} written "
+            f"\u2192 [magenta]{output_path}[/]"
         )
 
 

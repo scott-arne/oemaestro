@@ -69,8 +69,6 @@ public:
     /// :param pred: Unary atom predicate that returns true for cofactor atoms.
     void SetCofactorPredicate(const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred);
 
-    void SetPerception(OEMaestroPerception perception);
-    void SetTagFormat(OEMaestroTag tags);
     OEMaestroPerception GetPerception() const;
     OEMaestroTag GetTagFormat() const;
     OEMaestroReaderConfig GetConfig() const;

@@ -68,16 +68,6 @@ public:
     /// :param conf_test: Conformer test object (ownership transferred).
     void SetConfTest(OEChem::OEConfTestBase* conf_test);
 
-    /// Sets the perception bitmask.
-    ///
-    /// :param perception: New perception bitmask.
-    void SetPerception(OEMaestroPerception perception);
-
-    /// Sets the tag format bitmask.
-    ///
-    /// :param tags: New tag format bitmask.
-    void SetTagFormat(OEMaestroTag tags);
-
     /// Gets the current perception bitmask.
     ///
     /// :returns: Current perception bitmask.

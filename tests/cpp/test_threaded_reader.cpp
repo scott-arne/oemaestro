@@ -112,15 +112,6 @@ TEST(ThreadedReaderTest, EarlyDestruction) {
     SUCCEED();
 }
 
-TEST(ThreadedReaderTest, SetPerceptionThrowsWhenThreaded) {
-    std::string path = DATA_DIR + "/simple.mae";
-    OEMaestro::OEMaestroReaderConfig cfg;
-    cfg.SetNumThreads(4);
-    OEMaestro::OEMaestroReader reader(path, cfg);
-    EXPECT_THROW(reader.SetPerception(OEMaestro::PERCEPTION_NONE), std::logic_error);
-    EXPECT_THROW(reader.SetTagFormat(OEMaestro::TAG_NAME), std::logic_error);
-}
-
 TEST(ThreadedReaderTest, SingleThreadUnchanged) {
     std::string path = DATA_DIR + "/simple.mae";
     OEMaestro::OEMaestroReaderConfig cfg;
@@ -130,7 +121,6 @@ TEST(ThreadedReaderTest, SingleThreadUnchanged) {
     ASSERT_TRUE(reader.Read(mol));
     EXPECT_EQ(mol.NumAtoms(), 9u);
     EXPECT_STREQ(mol.GetTitle(), "Ethanol");
-    EXPECT_NO_THROW(reader.SetPerception(OEMaestro::PERCEPTION_NONE));
 }
 
 TEST(ThreadedReaderTest, ConformerGroupingThreaded) {
