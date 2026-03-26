@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.2.1"
-__version_info__ = (0, 2, 1)
+__version__ = "0.3.0"
+__version_info__ = (0, 3, 0)
 
 
 def _ensure_library_compat():
