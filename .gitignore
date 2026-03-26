@@ -310,6 +310,7 @@ docs/plans/
 docs/superpowers/
 .claude
 build-debug/
+python/oemaestro/_build_info.py
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
