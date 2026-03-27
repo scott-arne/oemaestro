@@ -104,6 +104,8 @@ jobs:
         run: |
           OE_LIB_DIR=$(/opt/venv/bin/python -c \
             "from openeye import libs; print(libs.FindOpenEyeDLLSDirectory())")
+          OE_PLATFORM=$(/opt/venv/bin/python -c \
+            "from openeye import libs; import os; print(os.path.basename(libs.FindOpenEyeDLLSDirectory()))")
           EXCLUDE_ARGS=""
           for lib in "$OE_LIB_DIR"/lib*.so; do
             EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude $(basename $lib)"
@@ -115,6 +117,23 @@ jobs:
             dist/oemaestro-*.whl
           rm dist/oemaestro-*.whl
           mv dist-repaired/*.whl dist/
+
+      - name: Fix RPATH for OpenEye shared libraries
+        run: |
+          OE_PLATFORM=$(/opt/venv/bin/python -c \
+            "from openeye import libs; import os; print(os.path.basename(libs.FindOpenEyeDLLSDirectory()))")
+          WHEEL=$(ls dist/oemaestro-*.whl)
+          TMPDIR=$(mktemp -d)
+          unzip -q "$WHEEL" -d "$TMPDIR"
+          SO_FILE=$(find "$TMPDIR" -name '_oemaestro*.so' | head -1)
+          if [ -n "$SO_FILE" ]; then
+            patchelf --add-rpath '$ORIGIN' "$SO_FILE"
+            patchelf --add-rpath "\$ORIGIN/../openeye/libs/$OE_PLATFORM" "$SO_FILE"
+            echo "RPATH set to: $(patchelf --print-rpath "$SO_FILE")"
+          fi
+          rm "$WHEEL"
+          /opt/venv/bin/python -m wheel pack "$TMPDIR" -d dist/
+          rm -rf "$TMPDIR"
 
       - name: List built artifacts
         run: |

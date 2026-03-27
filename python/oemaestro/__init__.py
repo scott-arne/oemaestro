@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.4.1"
-__version_info__ = (0, 4, 1)
+__version__ = "0.4.2"
+__version_info__ = (0, 4, 2)
 
 
 def _default_num_threads():
@@ -102,6 +102,58 @@ def _ensure_library_compat():
     return created_any
 
 
+def _preload_shared_libs():
+    """Preload OpenEye shared libraries on Linux so _oemaestro can find them.
+
+    On Linux, auditwheel excludes OpenEye libraries from the wheel but the
+    resulting RUNPATH does not include the OpenEye library directory. This
+    function preloads all OpenEye shared libraries with RTLD_GLOBAL so the
+    dynamic linker can resolve them when _oemaestro is imported.
+    """
+    import sys
+    if sys.platform != 'linux':
+        return
+
+    try:
+        from . import _build_info
+    except ImportError:
+        return
+
+    if getattr(_build_info, 'OPENEYE_LIBRARY_TYPE', 'STATIC') != 'SHARED':
+        return
+
+    try:
+        from openeye import libs
+        oe_lib_dir = libs.FindOpenEyeDLLSDirectory()
+    except (ImportError, Exception):
+        return
+
+    if not os.path.isdir(oe_lib_dir):
+        return
+
+    import ctypes
+
+    # Preload from the OpenEye library directory (handles version-match case)
+    for f in sorted(os.listdir(oe_lib_dir)):
+        if f.endswith('.so') or '.so.' in f:
+            try:
+                ctypes.CDLL(os.path.join(oe_lib_dir, f), mode=ctypes.RTLD_GLOBAL)
+            except OSError:
+                pass
+
+    # Preload symlinks from package directory (handles version-mismatch case
+    # when _ensure_library_compat() has created compatibility symlinks)
+    pkg_dir = os.path.dirname(__file__)
+    expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    for lib_name in expected_libs:
+        symlink = os.path.join(pkg_dir, lib_name)
+        if os.path.islink(symlink):
+            try:
+                ctypes.CDLL(symlink, mode=ctypes.RTLD_GLOBAL)
+            except OSError:
+                pass
+
+
 def _check_openeye_version():
     """Check that the OpenEye version matches what was used at build time."""
     try:
@@ -140,6 +192,10 @@ def _check_openeye_version():
 
 # Create compatibility symlinks before loading the C extension
 _ensure_library_compat()
+
+# Preload OpenEye shared libraries (needed on Linux where RUNPATH may not
+# include the OpenEye library directory after auditwheel repair)
+_preload_shared_libs()
 
 # Check OpenEye version on import
 _check_openeye_version()
