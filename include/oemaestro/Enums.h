@@ -2,6 +2,7 @@
 #define OEMAESTRO_ENUMS_H
 
 #include <algorithm>
+#include <string>
 #include <thread>
 
 namespace OEMaestro {
@@ -85,6 +86,36 @@ private:
     OEMaestroTag tags_ = TAG_ALL;
     OEMaestroPerception perception_ = PERCEPTION_DEFAULT;
     unsigned int num_threads_ = default_num_threads();
+};
+
+/// Write mode for MaestroWriter.
+enum OEMaestroWriteMode : unsigned int {
+    WRITE_CREATE = 0,   ///< Overwrite/create new file (writes header block)
+    WRITE_APPEND = 1    ///< Append CT blocks to existing file (no header)
+};
+
+/// Writer configuration combining tag format, write mode, and default owner.
+class OEMaestroWriterConfig {
+public:
+    OEMaestroWriterConfig() = default;
+
+    OEMaestroWriterConfig(OEMaestroTag tags, OEMaestroWriteMode mode,
+                          const std::string& default_owner = "user")
+        : tags_(tags), mode_(mode), default_owner_(default_owner) {}
+
+    void SetTags(OEMaestroTag tags) { tags_ = tags; }
+    OEMaestroTag GetTags() const { return tags_; }
+
+    void SetMode(OEMaestroWriteMode mode) { mode_ = mode; }
+    OEMaestroWriteMode GetMode() const { return mode_; }
+
+    void SetDefaultOwner(const std::string& owner) { default_owner_ = owner; }
+    const std::string& GetDefaultOwner() const { return default_owner_; }
+
+private:
+    OEMaestroTag tags_ = TAG_ALL;
+    OEMaestroWriteMode mode_ = WRITE_CREATE;
+    std::string default_owner_ = "user";
 };
 
 }  // namespace OEMaestro
