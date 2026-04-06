@@ -77,7 +77,7 @@ struct OEMaestroDesignUnitReader::Impl {
             return false;
 
         OEChem::OEGraphMol full_mol;
-        converter.Convert(maestro_buf, full_mol);
+        converter.Convert(full_mol, maestro_buf);
 
         // Build the protein predicate: NOT(ligand OR solvent OR cofactor)
         OESystem::OEOr<OEChem::OEAtomBase> non_protein(*ligand_pred, *solvent_pred);

@@ -22,7 +22,7 @@ bool OEReadMaestro(const std::string& filename, OEChem::OEMolBase& mol,
     MaestroMol maestro_mol;
     if (!reader.Read(maestro_mol))
         return false;
-    converter.Convert(maestro_mol, mol);
+    converter.Convert(mol, maestro_mol);
     return true;
 }
 
@@ -33,7 +33,7 @@ bool OEReadMaestro(OEPlatform::oeifstream& ifs, OEChem::OEMolBase& mol,
     MaestroMol maestro_mol;
     if (!reader.Read(maestro_mol))
         return false;
-    converter.Convert(maestro_mol, mol);
+    converter.Convert(mol, maestro_mol);
     return true;
 }
 

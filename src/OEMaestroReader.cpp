@@ -86,7 +86,7 @@ struct OEMaestroReader::Impl {
                     auto& [seq, maestro_mol] = *item;
                     try {
                         OEChem::OEMol mol;
-                        local_converter.Convert(maestro_mol, mol);
+                        local_converter.Convert(mol, maestro_mol);
                         out_q->Push({seq, std::move(mol)});
                     } catch (...) {
                         out_q->Push({seq, std::current_exception()});
@@ -170,7 +170,7 @@ struct OEMaestroReader::Impl {
         if (!conf_test->HasCompareMols()) {
             if (!reader->Read(maestro_buf))
                 return false;
-            converter.Convert(maestro_buf, mol);
+            converter.Convert(mol, maestro_buf);
             return true;
         }
 
@@ -180,12 +180,12 @@ struct OEMaestroReader::Impl {
         } else {
             if (!reader->Read(maestro_buf))
                 return false;
-            converter.Convert(maestro_buf, mol);
+            converter.Convert(mol, maestro_buf);
         }
 
         while (reader->Read(maestro_buf)) {
             pending_mol = OEChem::OEMol();
-            converter.Convert(maestro_buf, pending_mol);
+            converter.Convert(pending_mol, maestro_buf);
             if (conf_test->CompareMols(mol, pending_mol)) {
                 conf_test->CombineMols(mol, pending_mol);
             } else {
@@ -224,7 +224,7 @@ bool OEMaestroReader::Read(OEChem::OEMolBase& mol) {
     }
     if (!pimpl_->reader->Read(pimpl_->maestro_buf))
         return false;
-    pimpl_->converter.Convert(pimpl_->maestro_buf, mol);
+    pimpl_->converter.Convert(mol, pimpl_->maestro_buf);
     return true;
 }
 

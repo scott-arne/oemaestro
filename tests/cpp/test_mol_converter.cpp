@@ -43,7 +43,7 @@ TEST(MolConverterTest, ConvertSimpleMolecule) {
     MolConverter conv;
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     EXPECT_EQ(mol.NumAtoms(), 2u);
     EXPECT_EQ(mol.NumBonds(), 1u);
     EXPECT_STREQ(mol.GetTitle(), "TestMol");
@@ -53,7 +53,7 @@ TEST(MolConverterTest, ConvertCoordinates) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     OESystem::OEIter<OEChem::OEAtomBase> ai = mol.GetAtoms();
     float xyz[3];
     mol.GetCoords(&(*ai), xyz);
@@ -88,7 +88,7 @@ TEST(MolConverterTest, ConvertResidueInfo) {
     mm.atoms.push_back(n_atom);
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     auto atom = mol.GetAtoms();
     OEChem::OEResidue res = OEChem::OEAtomGetResidue(*atom);
     EXPECT_STREQ(res.GetName(), "ALA ");
@@ -109,8 +109,9 @@ TEST(MolConverterTest, TagFormatAll) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
-    EXPECT_TRUE(OEChem::OEHasSDData(mol, "r_m_pdb_tfactor"));
+    conv.Convert(mol, mm);
+    EXPECT_TRUE(mol.HasData("r_m_pdb_tfactor"));
+    EXPECT_DOUBLE_EQ(mol.GetDoubleData("r_m_pdb_tfactor"), 20.0);
 }
 
 TEST(MolConverterTest, TagFormatNameOnly) {
@@ -124,9 +125,10 @@ TEST(MolConverterTest, TagFormatNameOnly) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
-    EXPECT_TRUE(OEChem::OEHasSDData(mol, "pdb_tfactor"));
-    EXPECT_FALSE(OEChem::OEHasSDData(mol, "r_m_pdb_tfactor"));
+    conv.Convert(mol, mm);
+    EXPECT_TRUE(mol.HasData("pdb_tfactor"));
+    EXPECT_DOUBLE_EQ(mol.GetDoubleData("pdb_tfactor"), 20.0);
+    EXPECT_FALSE(mol.HasData("r_m_pdb_tfactor"));
 }
 
 TEST(MolConverterTest, TagFormatNone) {
@@ -140,20 +142,42 @@ TEST(MolConverterTest, TagFormatNone) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     // With TAG_NONE, no data tags should be stored
     bool has_any = false;
-    for (auto dp = OEChem::OEGetSDDataPairs(mol); dp; ++dp) {
+    for (auto dp = mol.GetDataIter(); dp; ++dp) {
         has_any = true;
     }
     EXPECT_FALSE(has_any);
+}
+
+TEST(MolConverterTest, TypedDataFromPrefix) {
+    MolConverter conv(TAG_ALL, PERCEPTION_NONE);
+    MaestroMol mm;
+    mm.title = "TypedTest";
+
+    MaestroAtom atom;
+    atom.atomic_number = 6;
+    mm.atoms.push_back(atom);
+    mm.ct_properties["i_m_ct_format"] = "2";
+    mm.ct_properties["r_sd_MolWt"] = "180.156";
+    mm.ct_properties["s_lp_Force_Field"] = "OPLS4";
+    mm.ct_properties["b_sd_chiral_flag"] = "1";
+
+    OEChem::OEGraphMol mol;
+    conv.Convert(mol, mm);
+
+    EXPECT_EQ(mol.GetIntData("i_m_ct_format"), 2);
+    EXPECT_DOUBLE_EQ(mol.GetDoubleData("r_sd_MolWt"), 180.156);
+    EXPECT_EQ(mol.GetStringData("s_lp_Force_Field"), "OPLS4");
+    EXPECT_EQ(mol.GetIntData("b_sd_chiral_flag"), 1);
 }
 
 TEST(MolConverterTest, ConvertBondOrder) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();  // Has order=2 bond
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     OESystem::OEIter<OEChem::OEBondBase> bi = mol.GetBonds();
     EXPECT_EQ(bi->GetOrder(), 2u);
 }
@@ -163,7 +187,7 @@ TEST(MolConverterTest, ConvertTitle) {
     auto mm = make_simple_mol();
     mm.title = "My Molecule";
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     EXPECT_STREQ(mol.GetTitle(), "My Molecule");
 }
 
@@ -182,14 +206,14 @@ TEST(MolConverterTest, InvalidBondIndexThrows) {
     mm.bonds.push_back(bond);
 
     OEChem::OEGraphMol mol;
-    EXPECT_THROW(conv.Convert(mm, mol), MaestroConvertError);
+    EXPECT_THROW(conv.Convert(mol, mm), MaestroConvertError);
 }
 
 TEST(MolConverterTest, PerceptionNone) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mm, mol);
+    conv.Convert(mol, mm);
     EXPECT_EQ(mol.NumAtoms(), 2u);
     // Just verify it completes without error
 }
