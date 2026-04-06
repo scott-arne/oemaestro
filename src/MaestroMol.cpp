@@ -27,6 +27,10 @@ std::string MaestroMol::ToString() const {
             << " name=\"" << a.atom_name << "\""
             << " res=" << a.residue_name << ":" << a.residue_number
             << ":" << a.chain_id;
+        if (a.isotope != 0)
+            oss << " isotope=" << a.isotope;
+        if (a.partial_charge != 0.0)
+            oss << " partial_charge=" << a.partial_charge;
         if (!a.properties.empty())
             oss << " [" << a.properties.size() << " props]";
     }
