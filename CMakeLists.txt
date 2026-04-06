@@ -67,6 +67,7 @@ set(OEMAESTRO_SOURCES
     src/ResidueClassifier.cpp
     src/OEMaestroDesignUnitReader.cpp
     src/OEReadMaestroDesignUnit.cpp
+    src/OEMaestroTagConverter.cpp
 )
 
 add_library(oemaestro ${OEMAESTRO_SOURCES})
