@@ -1,7 +1,12 @@
 import tempfile
 import pytest
 from pathlib import Path
-from openeye import oechem
+
+try:
+    from openeye import oechem
+except ImportError:
+    pytest.skip("OpenEye Toolkits not available", allow_module_level=True)
+
 import oemaestro
 
 

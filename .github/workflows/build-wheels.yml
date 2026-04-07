@@ -129,6 +129,7 @@ jobs:
           SO_FILE=$(find "$TMPDIR" -name '_oemaestro*.so' | head -1)
           if [ -n "$SO_FILE" ]; then
             patchelf --add-rpath '$ORIGIN' "$SO_FILE"
+            patchelf --add-rpath '$ORIGIN/../oemaestro.libs' "$SO_FILE"
             patchelf --add-rpath "\$ORIGIN/../openeye/libs/$OE_PLATFORM" "$SO_FILE"
             echo "RPATH set to: $(patchelf --print-rpath "$SO_FILE")"
           fi
