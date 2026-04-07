@@ -143,9 +143,12 @@ TEST(MolConverterTest, TagFormatNone) {
 
     OEChem::OEGraphMol mol;
     conv.Convert(mol, mm);
-    // With TAG_NONE, no data tags should be stored
+    // With TAG_NONE, no ct_properties should be stored as generic data.
+    // Note: GetDataIter() returns a raw OEIterBase* — must use explicit
+    // OEIter<OEBaseData> type, not auto (auto deduces a raw pointer whose
+    // bool test is always true, causing an infinite loop).
     bool has_any = false;
-    for (auto dp = mol.GetDataIter(); dp; ++dp) {
+    for (OESystem::OEIter<OESystem::OEBaseData> gdata = mol.GetDataIter(); gdata; ++gdata) {
         has_any = true;
     }
     EXPECT_FALSE(has_any);

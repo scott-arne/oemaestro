@@ -27,7 +27,7 @@ public:
     ///
     /// :param maestro_key: Full Maestro key (e.g., ``r_m_x_coord``).
     /// :returns: Formatted key. Non-t_o_d keys returned as-is.
-    std::string ToFormatted(const std::string& maestro_key) const;
+    std::string ToFormatted(const std::string& maestro_key) const;  // NOLINT(modernize-use-nodiscard)
 
     /// Convert a formatted key back to a full Maestro t_o_d key.
     ///
@@ -38,7 +38,7 @@ public:
     /// :param formatted_key: The formatted key to reconstruct.
     /// :param type_hint: OE data type char ('i','r','s','b') for inference.
     /// :returns: Full Maestro t_o_d key.
-    std::string ToMaestroTag(const std::string& formatted_key,
+    std::string ToMaestroTag(const std::string& formatted_key,  // NOLINT(modernize-use-nodiscard)
                              char type_hint = '\0') const;
 
     /// Check if a key matches the full Maestro t_o_d format.
@@ -47,9 +47,9 @@ public:
     /// :returns: True if the key has a valid type prefix, underscore, owner, underscore, name.
     static bool IsFullMaestroKey(const std::string& key);
 
-    OEMaestroTag GetTags() const;
+    OEMaestroTag GetTags() const;                  // NOLINT(modernize-use-nodiscard)
     void SetTags(OEMaestroTag tags);
-    const std::string& GetDefaultOwner() const;
+    const std::string& GetDefaultOwner() const;    // NOLINT(modernize-use-nodiscard)
     void SetDefaultOwner(const std::string& owner);
 
 private:

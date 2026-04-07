@@ -4,9 +4,9 @@
 /** @brief Major version number */
 #define OEMAESTRO_VERSION_MAJOR 0
 /** @brief Minor version number */
-#define OEMAESTRO_VERSION_MINOR 4
+#define OEMAESTRO_VERSION_MINOR 5
 /** @brief Patch version number */
-#define OEMAESTRO_VERSION_PATCH 3
+#define OEMAESTRO_VERSION_PATCH 0
 
 #include "oemaestro/Error.h"
 #include "oemaestro/Enums.h"
@@ -19,5 +19,9 @@
 #include "oemaestro/ResidueClassifier.h"
 #include "oemaestro/OEMaestroDesignUnitReader.h"
 #include "oemaestro/OEReadMaestroDesignUnit.h"
+#include "oemaestro/OEMaestroTagConverter.h"
+#include "oemaestro/MaestroWriter.h"
+#include "oemaestro/OEMaestroWriter.h"
+#include "oemaestro/OEWriteMaestro.h"
 
 #endif // OEMAESTRO_OEMAESTRO_H

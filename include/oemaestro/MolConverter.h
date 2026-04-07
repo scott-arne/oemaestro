@@ -26,12 +26,15 @@ public:
     void Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const;
 
     /// Write direction: OEMolBase -> vector of MaestroMol (one per conformer).
+    ///
+    /// If src is a multi-conformer molecule (OEMCMolBase), produces one MaestroMol
+    /// per conformer. Otherwise produces a single MaestroMol from the active conformer.
     void Convert(std::vector<MaestroMol>& dst, const OEChem::OEMolBase& src) const;
 
     void SetTagFormat(OEMaestroTag tags);
-    OEMaestroTag GetTagFormat() const;
+    OEMaestroTag GetTagFormat() const;          // NOLINT(modernize-use-nodiscard)
     void SetPerception(OEMaestroPerception perception);
-    OEMaestroPerception GetPerception() const;
+    OEMaestroPerception GetPerception() const;  // NOLINT(modernize-use-nodiscard)
 
 private:
     void ApplyDataTags(const MaestroMol& maestro_mol,

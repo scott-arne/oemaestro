@@ -14,6 +14,10 @@
 #include "oemaestro/ResidueClassifier.h"
 #include "oemaestro/OEMaestroDesignUnitReader.h"
 #include "oemaestro/OEReadMaestroDesignUnit.h"
+#include "oemaestro/OEMaestroTagConverter.h"
+#include "oemaestro/MaestroWriter.h"
+#include "oemaestro/OEMaestroWriter.h"
+#include "oemaestro/OEWriteMaestro.h"
 
 #include <oechem.h>
 #include <oebio.h>
@@ -295,6 +299,38 @@ public:
     unsigned int GetNumThreads() const;
 };
 
+enum OEMaestroWriteMode : unsigned int {
+    WRITE_CREATE = 0,
+    WRITE_APPEND = 1
+};
+
+class OEMaestroWriterConfig {
+public:
+    OEMaestroWriterConfig();
+    OEMaestroWriterConfig(OEMaestroTag tags, OEMaestroWriteMode mode,
+                          const std::string& default_owner = "user");
+    void SetTags(OEMaestroTag tags);
+    OEMaestroTag GetTags() const;
+    void SetMode(OEMaestroWriteMode mode);
+    OEMaestroWriteMode GetMode() const;
+    void SetDefaultOwner(const std::string& owner);
+    const std::string& GetDefaultOwner() const;
+};
+
+class OEMaestroTagConverter {
+public:
+    explicit OEMaestroTagConverter(OEMaestroTag tags = TAG_ALL,
+                                   const std::string& default_owner = "user");
+    std::string ToFormatted(const std::string& maestro_key) const;
+    std::string ToMaestroTag(const std::string& formatted_key,
+                             char type_hint = '\0') const;
+    static bool IsFullMaestroKey(const std::string& key);
+    OEMaestroTag GetTags() const;
+    void SetTags(OEMaestroTag tags);
+    const std::string& GetDefaultOwner() const;
+    void SetDefaultOwner(const std::string& owner);
+};
+
 // ============================================================================
 // Error classes (for SWIG to see them)
 // ============================================================================
@@ -376,7 +412,8 @@ public:
     MolConverter();
     explicit MolConverter(OEMaestroTag tags, OEMaestroPerception perception = PERCEPTION_ALL);
 
-    void Convert(const MaestroMol& maestro_mol, OEChem::OEMolBase& mol) const;
+    void Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const;
+    void Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const;
 
     void SetTagFormat(OEMaestroTag tags);
     OEMaestroTag GetTagFormat() const;
@@ -461,6 +498,64 @@ bool OEReadMaestroDesignUnit(const std::string& filename,
 // Note: iterator-returning overloads NOT exposed (move-only return)
 // Note: oeifstream overloads NOT exposed (handled in __init__.py)
 
+// ============================================================================
+// MaestroWriter (Layer 1) -- low-level IR writer
+// ============================================================================
+
+%ignore MaestroWriter(const MaestroWriter&);
+%ignore MaestroWriter::operator=(const MaestroWriter&);
+%ignore MaestroWriter::operator=(MaestroWriter&&);
+
+%threadallow MaestroWriter::Write;
+%threadallow MaestroWriter::Close;
+
+class MaestroWriter {
+public:
+    explicit MaestroWriter(const std::string& filename,
+                           OEMaestroWriteMode mode = WRITE_CREATE);
+    // Note: shared_ptr<ostream> constructor not exposed to Python
+
+    bool Write(const MaestroMol& mol);
+    void Close();
+
+    ~MaestroWriter();
+    MaestroWriter(MaestroWriter&&) noexcept;
+};
+
+// ============================================================================
+// OEMaestroWriter (Layer 3) -- main writer API
+// ============================================================================
+
+%ignore OEMaestroWriter(const OEMaestroWriter&);
+%ignore OEMaestroWriter::operator=(const OEMaestroWriter&);
+%ignore OEMaestroWriter::operator=(OEMaestroWriter&&);
+
+%threadallow OEMaestroWriter::Write;
+%threadallow OEMaestroWriter::Close;
+
+class OEMaestroWriter {
+public:
+    explicit OEMaestroWriter(const std::string& filename,
+                             OEMaestroWriteMode mode = WRITE_CREATE);
+    OEMaestroWriter(const std::string& filename,
+                    const OEMaestroWriterConfig& config);
+    // Note: oeofstream constructors not exposed to Python (handled in __init__.py)
+
+    bool Write(const OEChem::OEMolBase& mol);
+    void Close();
+
+    ~OEMaestroWriter();
+    OEMaestroWriter(OEMaestroWriter&&) noexcept;
+};
+
+// ============================================================================
+// Single-molecule OEWriteMaestro (SWIG-exposed overloads)
+// ============================================================================
+bool OEWriteMaestro(const std::string& filename, const OEChem::OEMolBase& mol);
+bool OEWriteMaestro(const std::string& filename, const OEChem::OEMolBase& mol,
+                    const OEMaestroWriterConfig& config);
+// Note: oeofstream overloads NOT exposed (handled in __init__.py)
+
 } // namespace OEMaestro
 
 // ============================================================================
@@ -493,5 +588,12 @@ def __repr__(self):
 def __repr__(self):
     config = self.GetConfig()
     return f"OEMaestroDesignUnitReader(tags={config.GetTags()}, perception={config.GetPerception()})"
+%}
+}
+
+%extend OEMaestro::OEMaestroWriter {
+%pythoncode %{
+def __repr__(self):
+    return "OEMaestroWriter()"
 %}
 }

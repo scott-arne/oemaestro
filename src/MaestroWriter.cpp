@@ -284,7 +284,7 @@ struct MaestroWriter::Impl {
         }
     }
 
-    bool Write(const MaestroMol& mol) {
+    bool Write(const MaestroMol& mol) {  // NOLINT(readability-make-member-function-const) -- mutates writer state
         if (closed) {
             throw OEMaestroError("Cannot write to closed MaestroWriter");
         }

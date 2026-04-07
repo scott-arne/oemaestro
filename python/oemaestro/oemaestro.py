@@ -476,6 +476,68 @@ class OEMaestroReaderConfig(object):
 
 # Register OEMaestroReaderConfig in _oemaestro:
 _oemaestro.OEMaestroReaderConfig_swigregister(OEMaestroReaderConfig)
+WRITE_CREATE = _oemaestro.WRITE_CREATE
+WRITE_APPEND = _oemaestro.WRITE_APPEND
+class OEMaestroWriterConfig(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _oemaestro.OEMaestroWriterConfig_swiginit(self, _oemaestro.new_OEMaestroWriterConfig(*args))
+
+    def SetTags(self, tags):
+        return _oemaestro.OEMaestroWriterConfig_SetTags(self, tags)
+
+    def GetTags(self):
+        return _oemaestro.OEMaestroWriterConfig_GetTags(self)
+
+    def SetMode(self, mode):
+        return _oemaestro.OEMaestroWriterConfig_SetMode(self, mode)
+
+    def GetMode(self):
+        return _oemaestro.OEMaestroWriterConfig_GetMode(self)
+
+    def SetDefaultOwner(self, owner):
+        return _oemaestro.OEMaestroWriterConfig_SetDefaultOwner(self, owner)
+
+    def GetDefaultOwner(self):
+        return _oemaestro.OEMaestroWriterConfig_GetDefaultOwner(self)
+    __swig_destroy__ = _oemaestro.delete_OEMaestroWriterConfig
+
+# Register OEMaestroWriterConfig in _oemaestro:
+_oemaestro.OEMaestroWriterConfig_swigregister(OEMaestroWriterConfig)
+class OEMaestroTagConverter(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _oemaestro.OEMaestroTagConverter_swiginit(self, _oemaestro.new_OEMaestroTagConverter(*args))
+
+    def ToFormatted(self, maestro_key):
+        return _oemaestro.OEMaestroTagConverter_ToFormatted(self, maestro_key)
+
+    def ToMaestroTag(self, *args):
+        return _oemaestro.OEMaestroTagConverter_ToMaestroTag(self, *args)
+
+    @staticmethod
+    def IsFullMaestroKey(key):
+        return _oemaestro.OEMaestroTagConverter_IsFullMaestroKey(key)
+
+    def GetTags(self):
+        return _oemaestro.OEMaestroTagConverter_GetTags(self)
+
+    def SetTags(self, tags):
+        return _oemaestro.OEMaestroTagConverter_SetTags(self, tags)
+
+    def GetDefaultOwner(self):
+        return _oemaestro.OEMaestroTagConverter_GetDefaultOwner(self)
+
+    def SetDefaultOwner(self, owner):
+        return _oemaestro.OEMaestroTagConverter_SetDefaultOwner(self, owner)
+    __swig_destroy__ = _oemaestro.delete_OEMaestroTagConverter
+
+# Register OEMaestroTagConverter in _oemaestro:
+_oemaestro.OEMaestroTagConverter_swigregister(OEMaestroTagConverter)
 class OEMaestroError(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -594,8 +656,8 @@ class MolConverter(object):
     def __init__(self, *args):
         _oemaestro.MolConverter_swiginit(self, _oemaestro.new_MolConverter(*args))
 
-    def Convert(self, maestro_mol, mol):
-        return _oemaestro.MolConverter_Convert(self, maestro_mol, mol)
+    def Convert(self, *args):
+        return _oemaestro.MolConverter_Convert(self, *args)
 
     def SetTagFormat(self, tags):
         return _oemaestro.MolConverter_SetTagFormat(self, tags)
@@ -681,4 +743,43 @@ _oemaestro.OEMaestroDesignUnitReader_swigregister(OEMaestroDesignUnitReader)
 
 def OEReadMaestroDesignUnit(*args):
     return _oemaestro.OEReadMaestroDesignUnit(*args)
+class MaestroWriter(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def Write(self, mol):
+        return _oemaestro.MaestroWriter_Write(self, mol)
+
+    def Close(self):
+        return _oemaestro.MaestroWriter_Close(self)
+    __swig_destroy__ = _oemaestro.delete_MaestroWriter
+
+    def __init__(self, *args):
+        _oemaestro.MaestroWriter_swiginit(self, _oemaestro.new_MaestroWriter(*args))
+
+# Register MaestroWriter in _oemaestro:
+_oemaestro.MaestroWriter_swigregister(MaestroWriter)
+class OEMaestroWriter(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def Write(self, mol):
+        return _oemaestro.OEMaestroWriter_Write(self, mol)
+
+    def Close(self):
+        return _oemaestro.OEMaestroWriter_Close(self)
+    __swig_destroy__ = _oemaestro.delete_OEMaestroWriter
+
+    def __init__(self, *args):
+        _oemaestro.OEMaestroWriter_swiginit(self, _oemaestro.new_OEMaestroWriter(*args))
+
+    def __repr__(self):
+        return "OEMaestroWriter()"
+
+
+# Register OEMaestroWriter in _oemaestro:
+_oemaestro.OEMaestroWriter_swigregister(OEMaestroWriter)
+
+def OEWriteMaestro(*args):
+    return _oemaestro.OEWriteMaestro(*args)
 

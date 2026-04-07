@@ -39,7 +39,7 @@ struct OEMaestroReader::Impl {
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()),
           num_threads_((config.GetNumThreads() == 0) ? 1 : config.GetNumThreads()) {
         reader = std::make_unique<MaestroReader>(filename);
-        if (num_threads_ > 1) StartThreads();
+        if (num_threads_ > 1) StartThreads();  // NOLINT(readability-simplify-boolean-expr)
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)
@@ -47,11 +47,11 @@ struct OEMaestroReader::Impl {
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()),
           num_threads_((config.GetNumThreads() == 0) ? 1 : config.GetNumThreads()) {
         reader = std::make_unique<MaestroReader>(make_maeparser_stream(ifs));
-        if (num_threads_ > 1) StartThreads();
+        if (num_threads_ > 1) StartThreads();  // NOLINT(readability-simplify-boolean-expr)
     }
 
     ~Impl() {
-        if (num_threads_ > 1) StopThreads();
+        if (num_threads_ > 1) StopThreads();  // NOLINT(readability-simplify-boolean-expr)
     }
 
     void StartThreads() {
@@ -75,13 +75,13 @@ struct OEMaestroReader::Impl {
             input_queue_->Close();
         });
 
-        OEMaestroTag tags = converter.GetTagFormat();
-        OEMaestroPerception perception = converter.GetPerception();
+        OEMaestroTag tags = converter.GetTagFormat();          // NOLINT -- captured by lambda below
+        OEMaestroPerception perception = converter.GetPerception();  // NOLINT -- captured by lambda below
         auto active = active_workers_;
-        auto* out_q = output_queue_.get();
+        auto* out_q = output_queue_.get();  // NOLINT -- captured by lambda below
         for (unsigned int i = 0; i < num_workers; i++) {
             workers_.emplace_back([this, tags, perception, active, out_q] {
-                MolConverter local_converter(tags, perception);
+                const MolConverter local_converter(tags, perception);
                 while (auto item = input_queue_->Pop()) {
                     auto& [seq, maestro_mol] = *item;
                     try {
@@ -119,7 +119,7 @@ struct OEMaestroReader::Impl {
                     next_seq_++;
                     std::rethrow_exception(eptr);
                 }
-                mol = std::move(std::get<OEChem::OEMol>(val));
+                mol = std::get<OEChem::OEMol>(val);
                 reorder_buf_.erase(it);
                 next_seq_++;
                 return true;
@@ -132,7 +132,7 @@ struct OEMaestroReader::Impl {
                     next_seq_++;
                     std::rethrow_exception(std::get<std::exception_ptr>(val));
                 }
-                mol = std::move(std::get<OEChem::OEMol>(val));
+                mol = std::get<OEChem::OEMol>(val);
                 next_seq_++;
                 return true;
             }
@@ -147,7 +147,7 @@ struct OEMaestroReader::Impl {
             }
             // Conformer grouping (post-reorder on main thread)
             if (has_pending) {
-                mol = std::move(pending_mol);
+                mol = pending_mol;  // NOLINT(performance-move-const-arg) OEMol has no move operator
                 has_pending = false;
             } else {
                 if (!ReadThreaded(mol)) return false;
@@ -158,7 +158,7 @@ struct OEMaestroReader::Impl {
                 if (conf_test->CompareMols(mol, next)) {
                     conf_test->CombineMols(mol, next);
                 } else {
-                    pending_mol = std::move(next);
+                    pending_mol = next;  // OEMol has no move operator
                     has_pending = true;
                     return true;
                 }
@@ -245,7 +245,8 @@ OEMaestroTag OEMaestroReader::GetTagFormat() const {
 }
 
 OEMaestroReaderConfig OEMaestroReader::GetConfig() const {
-    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception(), pimpl_->num_threads_);
+    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(),  // NOLINT(modernize-return-braced-init-list)
+                                pimpl_->converter.GetPerception(), pimpl_->num_threads_);
 }
 
 OEMaestroReader::~OEMaestroReader() = default;

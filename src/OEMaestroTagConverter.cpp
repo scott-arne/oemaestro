@@ -2,7 +2,7 @@
 
 namespace OEMaestro {
 
-OEMaestroTagConverter::OEMaestroTagConverter(OEMaestroTag tags,
+OEMaestroTagConverter::OEMaestroTagConverter(OEMaestroTag tags,  // NOLINT(performance-unnecessary-value-param)
                                              const std::string& default_owner)
     : tags_(tags), default_owner_(default_owner) {}
 
@@ -67,7 +67,7 @@ std::string OEMaestroTagConverter::ToMaestroTag(const std::string& formatted_key
             && second_underscore + 1 < rest.size()) {
             // "t_owner_name" pattern - type prefix present, owner_name follows
             return std::string(1, type_char) + "_" + rest;
-        } else {
+        } else {  // NOLINT(readability-else-after-return)
             // "t_name" pattern - type prefix present, but no owner in rest
             // Need to insert default owner
             return std::string(1, type_char) + "_" + default_owner_ + "_" + rest;

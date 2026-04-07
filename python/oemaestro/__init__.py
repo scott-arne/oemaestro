@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.4.3"
-__version_info__ = (0, 4, 3)
+__version__ = "0.5.0"
+__version_info__ = (0, 5, 0)
 
 
 def _default_num_threads():
@@ -220,6 +220,18 @@ from .oemaestro import (
     # DU reader
     OEMaestroDesignUnitReader as _CppOEMaestroDesignUnitReader,
     OEReadMaestroDesignUnit as _CppOEReadMaestroDesignUnit,
+    # Write mode enum
+    WRITE_CREATE, WRITE_APPEND,
+    # Writer config
+    OEMaestroWriterConfig,
+    # Tag converter
+    OEMaestroTagConverter,
+    # Layer 1 writer
+    MaestroWriter,
+    # Layer 3 C++ writer
+    OEMaestroWriter as _CppOEMaestroWriter,
+    # Single-mol write
+    OEWriteMaestro as _CppOEWriteMaestro,
 )
 
 
@@ -486,6 +498,74 @@ def OEReadMaestroDesignUnit(source, du=None, config=None, num_threads=None):
     return OEMaestroDesignUnitReader(source, config=config)
 
 
+# --- Writer ---
+
+
+class OEMaestroWriter:
+    """High-level Maestro file writer with context manager support.
+
+    :param source: Output filename (str or Path) or oeofstream.
+    :param config: Optional OEMaestroWriterConfig.
+    :param mode: Optional write mode (WRITE_CREATE or WRITE_APPEND).
+    """
+
+    def __init__(self, source, config=None, mode=None):
+        from pathlib import Path
+        if isinstance(source, Path):
+            source = str(source)
+
+        if config is not None:
+            self._writer = _CppOEMaestroWriter(source, config)
+        elif mode is not None:
+            self._writer = _CppOEMaestroWriter(source, mode)
+        else:
+            self._writer = _CppOEMaestroWriter(source)
+
+        self._closed = False
+
+    def write(self, mol):
+        """Write a molecule. Multi-conformer mols emit one CT per conformer.
+
+        :param mol: An OpenEye OEMolBase (OEGraphMol or OEMol).
+        :returns: True on success.
+        """
+        return self._writer.Write(mol)
+
+    def close(self):
+        """Flush and close the writer."""
+        if not self._closed:
+            self._writer.Close()
+            self._closed = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+def OEWriteMaestro(source, mol, config=None):
+    """Write a single molecule to a Maestro file.
+
+    :param source: Output filename (str or Path) or oeofstream.
+    :param mol: An OpenEye OEMolBase.
+    :param config: Optional OEMaestroWriterConfig.
+    :returns: True on success.
+    """
+    from pathlib import Path
+    if isinstance(source, Path):
+        source = str(source)
+    if config is not None:
+        return _CppOEWriteMaestro(source, mol, config)
+    return _CppOEWriteMaestro(source, mol)
+
+
 __all__ = [
     "__version__",
     "__version_info__",
@@ -494,15 +574,20 @@ __all__ = [
     "PERCEPTION_NONE", "PERCEPTION_CONNECTIVITY", "PERCEPTION_RINGS",
     "PERCEPTION_BOND_ORDERS", "PERCEPTION_IMPLICIT_HYDROGENS",
     "PERCEPTION_FORMAL_CHARGES", "PERCEPTION_ALL", "PERCEPTION_DEFAULT",
+    "WRITE_CREATE", "WRITE_APPEND",
     # Config
-    "OEMaestroReaderConfig",
+    "OEMaestroReaderConfig", "OEMaestroWriterConfig",
+    # Tag converter
+    "OEMaestroTagConverter",
     # IR types
     "MaestroAtom", "MaestroBond", "MaestroMol",
     # Layer 1-2
-    "MaestroReader", "MolConverter",
+    "MaestroReader", "MaestroWriter", "MolConverter",
     # Public API
     "OEMaestroReader",
     "OEReadMaestro",
+    "OEMaestroWriter",
+    "OEWriteMaestro",
     "OEMaestroDesignUnitReader",
     "OEReadMaestroDesignUnit",
 ]

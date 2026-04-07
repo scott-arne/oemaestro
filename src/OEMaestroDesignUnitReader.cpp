@@ -14,7 +14,7 @@ public:
     bool operator()(const OEChem::OEAtomBase& atom) const override {
         return atom.GetBoolData("is_ligand_atom");
     }
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {
+    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {  // NOLINT(modernize-use-nodiscard)
         return new IsLigandAtom(*this);
     }
 };
@@ -25,7 +25,7 @@ public:
         OEChem::OEResidue res = OEChem::OEAtomGetResidue(&atom);
         return IsSolventResidue(res.GetName());
     }
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {
+    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {  // NOLINT(modernize-use-nodiscard)
         return new IsSolventAtom(*this);
     }
 };
@@ -38,7 +38,7 @@ public:
         // Cofactor only if NOT already classified as solvent (solvent has priority)
         return IsCofactorResidue(name) && !IsSolventResidue(name);
     }
-    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {
+    OESystem::OEUnaryPredicate<OEChem::OEAtomBase>* CreateCopy() const override {  // NOLINT(modernize-use-nodiscard)
         return new IsCofactorAtom(*this);
     }
 };
@@ -114,19 +114,19 @@ bool OEMaestroDesignUnitReader::Read(OEBio::OEDesignUnit& du) {
 
 void OEMaestroDesignUnitReader::SetLigandPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    pimpl_->ligand_pred.reset(
+    pimpl_->ligand_pred.reset(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
         static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
 void OEMaestroDesignUnitReader::SetSolventPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    pimpl_->solvent_pred.reset(
+    pimpl_->solvent_pred.reset(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
         static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
 void OEMaestroDesignUnitReader::SetCofactorPredicate(
     const OESystem::OEUnaryPredicate<OEChem::OEAtomBase>& pred) {
-    pimpl_->cofactor_pred.reset(
+    pimpl_->cofactor_pred.reset(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
         static_cast<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>*>(pred.CreateCopy()));
 }
 
@@ -139,7 +139,8 @@ OEMaestroTag OEMaestroDesignUnitReader::GetTagFormat() const {
 }
 
 OEMaestroReaderConfig OEMaestroDesignUnitReader::GetConfig() const {
-    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(), pimpl_->converter.GetPerception());
+    return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(),  // NOLINT(modernize-return-braced-init-list)
+                                pimpl_->converter.GetPerception());
 }
 
 OEMaestroDesignUnitReader::~OEMaestroDesignUnitReader() = default;

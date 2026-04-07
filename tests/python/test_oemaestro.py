@@ -112,7 +112,7 @@ class TestTagFormatting:
         cfg.SetTags(TAG_NONE)
         reader = OEMaestroReader(f"{data_dir}/protein.mae", config=cfg)
         mol = next(iter(reader))
-        tags = list(oechem.OEGetSDDataPairs(mol))
+        tags = list(mol.GetDataIter())
         assert len(tags) == 0
 
 
@@ -190,7 +190,7 @@ class TestLowLevelAPI:
         reader.Read(mmol)
         converter = MolConverter()
         mol = oechem.OEGraphMol()
-        converter.Convert(mmol, mol)
+        converter.Convert(mol, mmol)
         assert mol.NumAtoms() == 9
 
     def test_maestro_mol_repr(self, data_dir):

@@ -1,16 +1,21 @@
 # oemaestro
 
-Native Maestro format (.mae, .mae.gz, .maegz) parser for
+Native Maestro format (.mae, .mae.gz, .maegz) reader and writer for
 [OpenEye Toolkits](https://docs.eyesopen.com/toolkits/python/index.html).
-Reads Schrodinger Maestro files directly into OpenEye molecule objects, with
-support for multi-threaded reading, conformer grouping, and design unit
-extraction.
+Reads and writes Schrodinger Maestro files directly with OpenEye molecule
+objects, with support for multi-threaded reading, conformer grouping, design
+unit extraction, and round-trip property preservation.
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Python API](#python-api)
+  - [Reading Molecules](#reading-molecules)
+  - [Writing Molecules](#writing-molecules)
+  - [Multi-Threaded Reading](#multi-threaded-reading)
+  - [Conformer Grouping](#conformer-grouping)
+  - [Design Units](#design-units)
 - [Command-Line Interface](#command-line-interface)
 - [Configuration](#configuration)
 - [License](#license)
@@ -42,10 +47,16 @@ python scripts/build_python.py            \
 ## Quick Start
 
 ```python
-from oemaestro import OEMaestroReader
+from oemaestro import OEMaestroReader, OEMaestroWriter
 
+# Read molecules from a Maestro file
 for mol in OEMaestroReader("input.mae"):
     print(mol.GetTitle(), mol.NumAtoms())
+
+# Write molecules to a Maestro file
+with OEMaestroWriter("output.mae") as writer:
+    for mol in OEMaestroReader("input.mae"):
+        writer.write(mol)
 ```
 
 ## Python API
@@ -78,6 +89,45 @@ ifs = oechem.oeifstream("structures.maegz")
 while OEMaestroReader(ifs, mol):
     ...
 ifs.close()
+```
+
+### Writing Molecules
+
+Write OpenEye molecules to Maestro format files:
+
+```python
+from openeye import oechem
+from oemaestro import OEMaestroWriter, OEWriteMaestro
+
+# Write multiple molecules using a context manager
+with OEMaestroWriter("output.mae") as writer:
+    for mol in molecules:
+        writer.write(mol)
+
+# Write a single molecule with one call
+OEWriteMaestro("output.mae", mol)
+
+# Write gzipped Maestro files
+with OEMaestroWriter("output.mae.gz") as writer:
+    writer.write(mol)
+```
+
+Multi-conformer `OEMol` objects are written as one CT block per conformer.
+SD data properties and typed generic data are preserved as Maestro CT-level
+properties.
+
+Configure writing with `OEMaestroWriterConfig`:
+
+```python
+from oemaestro import OEMaestroWriter, OEMaestroWriterConfig, TAG_NAME, WRITE_APPEND
+
+config = OEMaestroWriterConfig()
+config.SetTags(TAG_NAME)         # Tag format for property keys
+config.SetMode(WRITE_APPEND)     # Append to an existing file
+config.SetDefaultOwner("user")   # Default owner prefix for new keys
+
+with OEMaestroWriter("output.mae", config=config) as writer:
+    writer.write(mol)
 ```
 
 ### Multi-Threaded Reading

@@ -71,17 +71,17 @@ public:
     /// Gets the current perception bitmask.
     ///
     /// :returns: Current perception bitmask.
-    OEMaestroPerception GetPerception() const;
+    OEMaestroPerception GetPerception() const;  // NOLINT(modernize-use-nodiscard)
 
     /// Gets the current tag format bitmask.
     ///
     /// :returns: Current tag format bitmask.
-    OEMaestroTag GetTagFormat() const;
+    OEMaestroTag GetTagFormat() const;          // NOLINT(modernize-use-nodiscard)
 
     /// Gets the current reader configuration.
     ///
     /// :returns: Current reader configuration.
-    OEMaestroReaderConfig GetConfig() const;
+    OEMaestroReaderConfig GetConfig() const;    // NOLINT(modernize-use-nodiscard)
 
     ~OEMaestroReader();
     OEMaestroReader(const OEMaestroReader&) = delete;

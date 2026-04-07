@@ -26,7 +26,7 @@ StreamAdapter::StreamAdapter(OEPlatform::oeifstream& ifs)
     : std::istream(&buf_), buf_(ifs) {}
 
 std::shared_ptr<std::istream> make_maeparser_stream(OEPlatform::oeifstream& ifs) {
-    return std::shared_ptr<std::istream>(new StreamAdapter(ifs));
+    return std::make_shared<StreamAdapter>(ifs);
 }
 
 // --- Output adapter ---
@@ -46,7 +46,7 @@ bool OEOutputStreamBuf::FlushBuffer() {
 }
 
 int OEOutputStreamBuf::overflow(int ch) {
-    if (!FlushBuffer()) return traits_type::eof();
+    if (!FlushBuffer()) return traits_type::eof();  // NOLINT -- defensive; FlushBuffer may fail in subclasses
     if (ch != traits_type::eof()) {
         *pptr() = static_cast<char>(ch);
         pbump(1);
@@ -66,14 +66,14 @@ std::streamsize OEOutputStreamBuf::xsputn(const char* s, std::streamsize count) 
 }
 
 int OEOutputStreamBuf::sync() {
-    return FlushBuffer() ? 0 : -1;
+    return FlushBuffer() ? 0 : -1;  // NOLINT -- defensive; FlushBuffer may fail in subclasses
 }
 
 OutputStreamAdapter::OutputStreamAdapter(OEPlatform::oeofstream& ofs)
     : std::ostream(&buf_), buf_(ofs) {}
 
 std::shared_ptr<std::ostream> make_maeparser_ostream(OEPlatform::oeofstream& ofs) {
-    return std::shared_ptr<std::ostream>(new OutputStreamAdapter(ofs));
+    return std::make_shared<OutputStreamAdapter>(ofs);
 }
 
 }  // namespace OEMaestro

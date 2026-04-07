@@ -54,10 +54,10 @@ void MolConverter::Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const 
         OEChem::OEResidue res;
         res.SetName(maestro_atom.residue_name.c_str());
         res.SetResidueNumber(maestro_atom.residue_number);
-        res.SetChainID(maestro_atom.chain_id.c_str());
+        res.SetChainID(maestro_atom.chain_id.c_str());  // NOLINT(readability-redundant-string-cstr)
         res.SetInsertCode(maestro_atom.insert_code.empty() ? ' ' : maestro_atom.insert_code[0]);
-        res.SetBFactor(maestro_atom.bfactor);
-        res.SetOccupancy(maestro_atom.occupancy);
+        res.SetBFactor(static_cast<float>(maestro_atom.bfactor));
+        res.SetOccupancy(static_cast<float>(maestro_atom.occupancy));
         if (maestro_atom.secondary_structure >= 0) {
             res.SetSecondaryStructure(MaestroSSToOE(maestro_atom.secondary_structure));
         }
@@ -86,7 +86,7 @@ void MolConverter::Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const 
             static_cast<unsigned int>(bond.order));
     }
 
-    int dimension = OEChem::OEGetDimensionFromCoords(dst);
+    auto dimension = static_cast<int>(OEChem::OEGetDimensionFromCoords(dst));
     dst.SetDimension(dimension);
 
     if (tag_converter_.GetTags() != TAG_NONE) {
@@ -227,7 +227,7 @@ void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
     dst.atoms.reserve(src.GetMaxAtomIdx());
     for (OESystem::OEIter<OEChem::OEAtomBase> ai = src.GetAtoms(); ai; ++ai) {
         MaestroAtom matom;
-        matom.atomic_number = ai->GetAtomicNum();
+        matom.atomic_number = static_cast<int>(ai->GetAtomicNum());
 
         unsigned int idx = ai->GetIdx();
         if (conf_coords) {
@@ -243,7 +243,7 @@ void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
         }
 
         matom.formal_charge = ai->GetFormalCharge();
-        matom.isotope = ai->GetIsotope();
+        matom.isotope = static_cast<int>(ai->GetIsotope());
         matom.partial_charge = ai->GetPartialCharge();
         matom.atom_name = ai->GetName();
 
@@ -275,7 +275,7 @@ void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
         MaestroBond mbond;
         mbond.atom1_index = static_cast<int>(bi->GetBgnIdx());
         mbond.atom2_index = static_cast<int>(bi->GetEndIdx());
-        mbond.order = bi->GetOrder();
+        mbond.order = static_cast<int>(bi->GetOrder());
         dst.bonds.push_back(mbond);
     }
 
@@ -310,19 +310,19 @@ void MolConverter::Convert(std::vector<MaestroMol>& dst,
                            const OEChem::OEMolBase& src) const {
     dst.clear();
 
-    // Try to cast to OEMol to access conformers (OEGraphMol doesn't support GetConfs)
-    const OEChem::OEMol* mol_ptr = dynamic_cast<const OEChem::OEMol*>(&src);
-    if (mol_ptr) {
-        bool has_confs = false;
-        for (OESystem::OEIter<OEChem::OEConfBase> ci = mol_ptr->GetConfs(); ci; ++ci) {
-            has_confs = true;
+    // Try to cast to OEMCMolBase to access conformers.
+    // Note: dynamic_cast<const OEMol*> fails with static OpenEye libraries (no RTTI),
+    // but OEMCMolBase cast works and provides GetConfs()/NumConfs().
+    const OEChem::OEMCMolBase* mc_ptr = dynamic_cast<const OEChem::OEMCMolBase*>(&src);  // NOLINT(modernize-use-auto)
+    if (mc_ptr && mc_ptr->NumConfs() > 1) {
+        for (OESystem::OEIter<OEChem::OEConfBase> ci = mc_ptr->GetConfs(); ci; ++ci) {
             MaestroMol mmol;
             std::vector<float> coords(src.GetMaxAtomIdx() * 3);
             ci->GetCoords(coords.data());
             PopulateMaestroMol(mmol, src, coords.data(), tag_converter_);
             dst.push_back(std::move(mmol));
         }
-        if (has_confs) return;
+        return;
     }
 
     // No conformers or not an OEMol: write active conformer only

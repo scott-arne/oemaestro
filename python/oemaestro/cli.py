@@ -119,7 +119,7 @@ def _parse_perception_flags(values):
     return result
 
 
-@click.command()
+@click.command(context_settings={"max_content_width": 125})
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
 @click.version_option(__version__, prog_name="oemaestro")
@@ -280,16 +280,16 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
 
     import fnmatch
 
-    def _filter_sd_tags(mol):
+    def _filter_data_tags(mol):
         if not sd_tag_filter:
             return
         to_remove = []
-        for pair in oechem.OEGetSDDataPairs(mol):
-            tag = pair.GetTag()
-            if not any(fnmatch.fnmatch(tag, pat) for pat in sd_tag_filter):
-                to_remove.append(tag)
-        for tag in to_remove:
-            oechem.OEDeleteSDData(mol, tag)
+        for dp in mol.GetDataIter():
+            tag_name = oechem.OEGetTag(dp.GetTag())
+            if not any(fnmatch.fnmatch(tag_name, pat) for pat in sd_tag_filter):
+                to_remove.append(tag_name)
+        for tag_name in to_remove:
+            mol.DeleteData(oechem.OEGetTag(tag_name))
 
     from rich.console import Console
 
@@ -303,10 +303,10 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
     if quiet:
         for mol in reader:
             if title_field:
-                title = oechem.OEGetSDData(mol, title_field)
+                title = mol.GetStringData(title_field)
                 if title:
                     mol.SetTitle(title)
-            _filter_sd_tags(mol)
+            _filter_data_tags(mol)
             oechem.OEWriteMolecule(ofs, mol)
             mol_count += 1
             if count and mol_count >= count:
@@ -315,10 +315,10 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
         with console.status(_status_text(), spinner="dots", spinner_style="cyan") as status:
             for mol in reader:
                 if title_field:
-                    title = oechem.OEGetSDData(mol, title_field)
+                    title = mol.GetStringData(title_field)
                     if title:
                         mol.SetTitle(title)
-                _filter_sd_tags(mol)
+                _filter_data_tags(mol)
                 oechem.OEWriteMolecule(ofs, mol)
                 mol_count += 1
                 status.update(_status_text())

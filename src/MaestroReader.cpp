@@ -47,7 +47,7 @@ struct MaestroReader::Impl {
         }
     }
 
-    bool Read(MaestroMol& mol) {
+    bool Read(MaestroMol& mol) {  // NOLINT(readability-make-member-function-const) -- advances reader state
         std::shared_ptr<schrodinger::mae::Block> block;
         try {
             block = reader->next(schrodinger::mae::CT_BLOCK);

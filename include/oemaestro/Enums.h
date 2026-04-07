@@ -16,18 +16,20 @@ enum OEMaestroTag : unsigned int {
     TAG_ALL   = TAG_TYPE | TAG_OWNER | TAG_NAME
 };
 
-inline OEMaestroTag operator|(OEMaestroTag a, OEMaestroTag b) {
+// NOLINTBEGIN(misc-unused-parameters, readability-redundant-casting)
+inline OEMaestroTag operator|(const OEMaestroTag a, const OEMaestroTag b) {
     return static_cast<OEMaestroTag>(static_cast<unsigned>(a) | static_cast<unsigned>(b));
 }
-inline OEMaestroTag operator&(OEMaestroTag a, OEMaestroTag b) {
+inline OEMaestroTag operator&(const OEMaestroTag a, const OEMaestroTag b) {
     return static_cast<OEMaestroTag>(static_cast<unsigned>(a) & static_cast<unsigned>(b));
 }
-inline OEMaestroTag operator^(OEMaestroTag a, OEMaestroTag b) {
+inline OEMaestroTag operator^(const OEMaestroTag a, const OEMaestroTag b) {
     return static_cast<OEMaestroTag>(static_cast<unsigned>(a) ^ static_cast<unsigned>(b));
 }
-inline OEMaestroTag operator~(OEMaestroTag a) {
+inline OEMaestroTag operator~(const OEMaestroTag a) {
     return static_cast<OEMaestroTag>(~static_cast<unsigned>(a));
 }
+// NOLINTEND(misc-unused-parameters, readability-redundant-casting)
 
 /// Bitmask controlling post-parse perception steps.
 /// Steps execute in the listed order; steps not in the mask are skipped.
@@ -45,6 +47,7 @@ enum OEMaestroPerception : unsigned int {
                                   | PERCEPTION_FORMAL_CHARGES
 };
 
+// NOLINTBEGIN(misc-unused-parameters, readability-redundant-casting)
 inline OEMaestroPerception operator|(OEMaestroPerception a, OEMaestroPerception b) {
     return static_cast<OEMaestroPerception>(static_cast<unsigned>(a) | static_cast<unsigned>(b));
 }
@@ -57,6 +60,7 @@ inline OEMaestroPerception operator^(OEMaestroPerception a, OEMaestroPerception 
 inline OEMaestroPerception operator~(OEMaestroPerception a) {
     return static_cast<OEMaestroPerception>(~static_cast<unsigned>(a));
 }
+// NOLINTEND(misc-unused-parameters, readability-redundant-casting)
 
 /// Return min(2, hardware threads), falling back to 1.
 inline unsigned int default_num_threads() {
@@ -69,18 +73,18 @@ class OEMaestroReaderConfig {
 public:
     OEMaestroReaderConfig() = default;
 
-    OEMaestroReaderConfig(OEMaestroTag tags, OEMaestroPerception perception,
-                          unsigned int num_threads = default_num_threads())
+    OEMaestroReaderConfig(const OEMaestroTag tags, OEMaestroPerception perception,
+                          const unsigned int num_threads = default_num_threads())
         : tags_(tags), perception_(perception), num_threads_(num_threads) {}
 
-    void SetTags(OEMaestroTag tags) { tags_ = tags; }
-    OEMaestroTag GetTags() const { return tags_; }
+    void SetTags(const OEMaestroTag tags) { tags_ = tags; }
+    [[nodiscard]] OEMaestroTag GetTags() const { return tags_; }
 
     void SetPerception(OEMaestroPerception perception) { perception_ = perception; }
-    OEMaestroPerception GetPerception() const { return perception_; }
+    [[nodiscard]] OEMaestroPerception GetPerception() const { return perception_; }
 
     void SetNumThreads(unsigned int num_threads) { num_threads_ = num_threads; }
-    unsigned int GetNumThreads() const { return num_threads_; }
+    [[nodiscard]] unsigned int GetNumThreads() const { return num_threads_; }
 
 private:
     OEMaestroTag tags_ = TAG_ALL;
@@ -99,18 +103,18 @@ class OEMaestroWriterConfig {
 public:
     OEMaestroWriterConfig() = default;
 
-    OEMaestroWriterConfig(OEMaestroTag tags, OEMaestroWriteMode mode,
-                          const std::string& default_owner = "user")
+    OEMaestroWriterConfig(const OEMaestroTag tags, const OEMaestroWriteMode mode,
+                          const std::string& default_owner = "user") // NOLINT(*-pass-by-value)
         : tags_(tags), mode_(mode), default_owner_(default_owner) {}
 
-    void SetTags(OEMaestroTag tags) { tags_ = tags; }
-    OEMaestroTag GetTags() const { return tags_; }
+    void SetTags(const OEMaestroTag tags) { tags_ = tags; }
+    [[nodiscard]] OEMaestroTag GetTags() const { return tags_; }
 
-    void SetMode(OEMaestroWriteMode mode) { mode_ = mode; }
-    OEMaestroWriteMode GetMode() const { return mode_; }
+    void SetMode(const OEMaestroWriteMode mode) { mode_ = mode; }
+    [[nodiscard]] OEMaestroWriteMode GetMode() const { return mode_; }
 
     void SetDefaultOwner(const std::string& owner) { default_owner_ = owner; }
-    const std::string& GetDefaultOwner() const { return default_owner_; }
+    [[nodiscard]] const std::string& GetDefaultOwner() const { return default_owner_; }
 
 private:
     OEMaestroTag tags_ = TAG_ALL;
