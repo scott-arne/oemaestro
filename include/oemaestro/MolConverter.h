@@ -22,6 +22,12 @@ public:
     /// Read direction: MaestroMol -> OEMolBase.
     void Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const;
 
+    /// Write direction: OEMolBase -> MaestroMol (active conformer).
+    void Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const;
+
+    /// Write direction: OEMolBase -> vector of MaestroMol (one per conformer).
+    void Convert(std::vector<MaestroMol>& dst, const OEChem::OEMolBase& src) const;
+
     void SetTagFormat(OEMaestroTag tags);
     OEMaestroTag GetTagFormat() const;
     void SetPerception(OEMaestroPerception perception);

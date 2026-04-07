@@ -204,4 +204,130 @@ void MolConverter::RunPerception(OEChem::OEMolBase& mol, int dimension) const {
     }
 }
 
+namespace {
+
+/// Map OE secondary structure enum to Maestro integer.
+int OESSToMaestro(unsigned int oe_ss) {
+    switch (oe_ss) {
+        case OEBio::OESecondaryStructure::HelixAlpha: return 1;
+        case OEBio::OESecondaryStructure::Sheet:      return 2;
+        default: return -1;
+    }
+}
+
+/// Populate a MaestroMol from an OEMolBase.
+/// If conf_coords is not nullptr, use those coordinates instead of mol.GetCoords().
+void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
+                        const float* conf_coords,
+                        const OEMaestroTagConverter& tag_converter) {
+    dst.Clear();
+    dst.title = src.GetTitle();
+
+    // Atoms
+    dst.atoms.reserve(src.GetMaxAtomIdx());
+    for (OESystem::OEIter<OEChem::OEAtomBase> ai = src.GetAtoms(); ai; ++ai) {
+        MaestroAtom matom;
+        matom.atomic_number = ai->GetAtomicNum();
+
+        unsigned int idx = ai->GetIdx();
+        if (conf_coords) {
+            matom.x = conf_coords[idx * 3];
+            matom.y = conf_coords[idx * 3 + 1];
+            matom.z = conf_coords[idx * 3 + 2];
+        } else {
+            float xyz[3];
+            src.GetCoords(&(*ai), xyz);
+            matom.x = xyz[0];
+            matom.y = xyz[1];
+            matom.z = xyz[2];
+        }
+
+        matom.formal_charge = ai->GetFormalCharge();
+        matom.isotope = ai->GetIsotope();
+        matom.partial_charge = ai->GetPartialCharge();
+        matom.atom_name = ai->GetName();
+
+        OEChem::OEResidue res = OEChem::OEAtomGetResidue(&(*ai));
+        std::string res_name = res.GetName();
+        if (!res_name.empty()) {
+            matom.residue_name = res_name;
+            matom.residue_number = res.GetResidueNumber();
+            char chain = res.GetChainID();
+            if (chain != ' ' && chain != '\0')
+                matom.chain_id = std::string(1, chain);
+            char icode = res.GetInsertCode();
+            if (icode != ' ' && icode != '\0')
+                matom.insert_code = std::string(1, icode);
+            matom.bfactor = res.GetBFactor();
+            matom.occupancy = res.GetOccupancy();
+            matom.secondary_structure = OESSToMaestro(res.GetSecondaryStructure());
+        }
+
+        if (ai->GetBoolData("is_ligand_atom"))
+            matom.is_ligand_atom = true;
+
+        dst.atoms.push_back(std::move(matom));
+    }
+
+    // Bonds
+    dst.bonds.reserve(src.GetMaxBondIdx());
+    for (OESystem::OEIter<OEChem::OEBondBase> bi = src.GetBonds(); bi; ++bi) {
+        MaestroBond mbond;
+        mbond.atom1_index = static_cast<int>(bi->GetBgnIdx());
+        mbond.atom2_index = static_cast<int>(bi->GetEndIdx());
+        mbond.order = bi->GetOrder();
+        dst.bonds.push_back(mbond);
+    }
+
+    // CT-level generic data — extract SD data pairs and typed generic data.
+    // SD data (set via OESetSDData) is accessible via OEGetSDDataPairs.
+    for (OESystem::OEIter<OEChem::OESDDataPair> dp = OEChem::OEGetSDDataPairs(src); dp; ++dp) {
+        std::string tag_str = dp->GetTag();
+        if (tag_str.empty()) continue;
+
+        char type_prefix = '\0';
+        if (OEMaestroTagConverter::IsFullMaestroKey(tag_str)) {
+            type_prefix = tag_str[0];
+        }
+
+        std::string maestro_key = tag_converter.ToMaestroTag(tag_str, type_prefix);
+        dst.ct_properties[maestro_key] = dp->GetValue();
+    }
+
+    // Note: Typed generic data (SetIntData/SetDoubleData/SetStringData)
+    // is not iterable via the OE API. Only SD data pairs are captured.
+    // For full round-trip of CT properties, use the Layer 1 MaestroWriter
+    // with MaestroMol directly.
+}
+
+}  // anonymous namespace
+
+void MolConverter::Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const {
+    PopulateMaestroMol(dst, src, nullptr, tag_converter_);
+}
+
+void MolConverter::Convert(std::vector<MaestroMol>& dst,
+                           const OEChem::OEMolBase& src) const {
+    dst.clear();
+
+    // Try to cast to OEMol to access conformers (OEGraphMol doesn't support GetConfs)
+    const OEChem::OEMol* mol_ptr = dynamic_cast<const OEChem::OEMol*>(&src);
+    if (mol_ptr) {
+        bool has_confs = false;
+        for (OESystem::OEIter<OEChem::OEConfBase> ci = mol_ptr->GetConfs(); ci; ++ci) {
+            has_confs = true;
+            MaestroMol mmol;
+            std::vector<float> coords(src.GetMaxAtomIdx() * 3);
+            ci->GetCoords(coords.data());
+            PopulateMaestroMol(mmol, src, coords.data(), tag_converter_);
+            dst.push_back(std::move(mmol));
+        }
+        if (has_confs) return;
+    }
+
+    // No conformers or not an OEMol: write active conformer only
+    dst.emplace_back();
+    PopulateMaestroMol(dst.back(), src, nullptr, tag_converter_);
+}
+
 }  // namespace OEMaestro

@@ -225,3 +225,142 @@ TEST(MolConverterTest, SettersAndGetters) {
     conv.SetPerception(PERCEPTION_NONE);
     EXPECT_EQ(conv.GetPerception(), PERCEPTION_NONE);
 }
+
+// --- Write direction tests ---
+
+TEST(MolConverterTest, WriteDirection_SingleAtom) {
+    OEChem::OEGraphMol mol;
+    auto* atom = mol.NewAtom(6);
+    float coords[] = {1.0f, 2.0f, 3.0f};
+    mol.SetCoords(atom, coords);
+    mol.SetTitle("test");
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.title, "test");
+    EXPECT_EQ(mmol.NumAtoms(), 1u);
+    EXPECT_EQ(mmol.atoms[0].atomic_number, 6);
+    EXPECT_NEAR(mmol.atoms[0].x, 1.0, 1e-4);
+    EXPECT_NEAR(mmol.atoms[0].y, 2.0, 1e-4);
+    EXPECT_NEAR(mmol.atoms[0].z, 3.0, 1e-4);
+}
+
+TEST(MolConverterTest, WriteDirection_BondsAndCharges) {
+    OEChem::OEGraphMol mol;
+    auto* c = mol.NewAtom(6);
+    auto* o = mol.NewAtom(8);
+    o->SetFormalCharge(-1);
+    mol.NewBond(c, o, 2);
+    mol.SetTitle("C=O");
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.NumAtoms(), 2u);
+    EXPECT_EQ(mmol.NumBonds(), 1u);
+    EXPECT_EQ(mmol.atoms[1].formal_charge, -1);
+    EXPECT_EQ(mmol.bonds[0].atom1_index, 0);
+    EXPECT_EQ(mmol.bonds[0].atom2_index, 1);
+    EXPECT_EQ(mmol.bonds[0].order, 2);
+}
+
+TEST(MolConverterTest, WriteDirection_IsotopeAndPartialCharge) {
+    OEChem::OEGraphMol mol;
+    auto* atom = mol.NewAtom(6);
+    atom->SetIsotope(13);
+    atom->SetPartialCharge(0.25);
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.atoms[0].isotope, 13);
+    EXPECT_NEAR(mmol.atoms[0].partial_charge, 0.25, 1e-6);
+}
+
+TEST(MolConverterTest, WriteDirection_ResidueInfo) {
+    OEChem::OEGraphMol mol;
+    auto* atom = mol.NewAtom(7);
+    atom->SetName(" CA ");
+    OEChem::OEResidue res;
+    res.SetName("ALA");
+    res.SetResidueNumber(42);
+    res.SetChainID("A");
+    res.SetInsertCode('B');
+    res.SetBFactor(15.5);
+    res.SetOccupancy(0.9);
+    res.SetSecondaryStructure(OEBio::OESecondaryStructure::HelixAlpha);
+    OEChem::OEAtomSetResidue(atom, res);
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.atoms[0].atom_name, " CA ");
+    EXPECT_EQ(mmol.atoms[0].residue_name, "ALA");
+    EXPECT_EQ(mmol.atoms[0].residue_number, 42);
+    EXPECT_EQ(mmol.atoms[0].chain_id, "A");
+    EXPECT_EQ(mmol.atoms[0].insert_code, "B");
+    EXPECT_NEAR(mmol.atoms[0].bfactor, 15.5, 1e-4);
+    EXPECT_NEAR(mmol.atoms[0].occupancy, 0.9, 1e-4);
+    EXPECT_EQ(mmol.atoms[0].secondary_structure, 1);
+}
+
+TEST(MolConverterTest, WriteDirection_SDData) {
+    OEChem::OEGraphMol mol;
+    mol.NewAtom(6);
+    mol.SetTitle("test");
+    OEChem::OESetSDData(mol, "r_m_mol_weight", "44.01");
+    OEChem::OESetSDData(mol, "s_user_myfield", "hello");
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.ct_properties.count("r_m_mol_weight"), 1u);
+    EXPECT_EQ(mmol.ct_properties.at("r_m_mol_weight"), "44.01");
+    EXPECT_EQ(mmol.ct_properties.count("s_user_myfield"), 1u);
+    EXPECT_EQ(mmol.ct_properties.at("s_user_myfield"), "hello");
+}
+
+TEST(MolConverterTest, WriteDirection_EmptyMolecule) {
+    OEChem::OEGraphMol mol;
+    mol.SetTitle("empty");
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.Convert(mmol, mol);
+
+    EXPECT_EQ(mmol.title, "empty");
+    EXPECT_EQ(mmol.NumAtoms(), 0u);
+    EXPECT_EQ(mmol.NumBonds(), 0u);
+}
+
+TEST(MolConverterTest, WriteDirection_MultiConformer) {
+    OEChem::OEMol mol;
+    auto* c = mol.NewAtom(6);
+    auto* o = mol.NewAtom(8);
+    mol.NewBond(c, o, 2);
+    mol.SetTitle("conformers");
+
+    float coords1[] = {0.0f, 0.0f, 0.0f, 1.2f, 0.0f, 0.0f};
+    mol.SetCoords(coords1);
+    float coords2[] = {0.0f, 0.0f, 0.0f, 0.0f, 1.2f, 0.0f};
+    mol.NewConf(coords2);
+
+    MolConverter converter;
+    std::vector<MaestroMol> mmols;
+    converter.Convert(mmols, mol);
+
+    EXPECT_EQ(mmols.size(), 2u);
+    EXPECT_EQ(mmols[0].NumAtoms(), 2u);
+    EXPECT_EQ(mmols[1].NumAtoms(), 2u);
+    EXPECT_EQ(mmols[0].NumBonds(), 1u);
+    EXPECT_NEAR(mmols[0].atoms[1].x, 1.2, 1e-4);
+    EXPECT_NEAR(mmols[0].atoms[1].y, 0.0, 1e-4);
+    EXPECT_NEAR(mmols[1].atoms[1].x, 0.0, 1e-4);
+    EXPECT_NEAR(mmols[1].atoms[1].y, 1.2, 1e-4);
+}
