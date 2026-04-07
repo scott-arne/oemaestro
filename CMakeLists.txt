@@ -68,6 +68,7 @@ set(OEMAESTRO_SOURCES
     src/OEMaestroDesignUnitReader.cpp
     src/OEReadMaestroDesignUnit.cpp
     src/OEMaestroTagConverter.cpp
+    src/MaestroWriter.cpp
 )
 
 add_library(oemaestro ${OEMAESTRO_SOURCES})

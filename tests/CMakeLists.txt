@@ -18,6 +18,7 @@ add_executable(oemaestro_tests
     cpp/test_design_unit_reader.cpp
     cpp/test_threaded_reader.cpp
     cpp/test_maestro_tag_converter.cpp
+    cpp/test_maestro_writer.cpp
 )
 
 target_link_libraries(oemaestro_tests
