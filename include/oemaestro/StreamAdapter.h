@@ -56,6 +56,48 @@ private:
 /// :returns: Shared pointer to an istream wrapping the oeifstream.
 std::shared_ptr<std::istream> make_maeparser_stream(OEPlatform::oeifstream& ifs);
 
+/// Adapts OEPlatform::oeofstream to std::ostream for use with maeparser Writer.
+///
+/// This streambuf adapter bridges OpenEye's oeofstream to std::ostream
+/// so it can be passed to maeparser's Writer which requires shared_ptr<std::ostream>.
+class OEOutputStreamBuf : public std::streambuf {
+public:
+    /// Constructs an output streambuf adapter.
+    ///
+    /// :param ofs: The OpenEye output file stream to adapt.
+    /// :param buf_size: Size of the internal buffer (default: 8192 bytes).
+    explicit OEOutputStreamBuf(OEPlatform::oeofstream& ofs,
+                               std::size_t buf_size = 8192);
+
+protected:
+    int overflow(int ch) override;
+    std::streamsize xsputn(const char* s, std::streamsize count) override;
+    int sync() override;
+
+private:
+    OEPlatform::oeofstream& ofs_;
+    std::vector<char> buffer_;
+    bool FlushBuffer();
+};
+
+/// Convenience wrapper: owns the streambuf and provides std::ostream interface.
+class OutputStreamAdapter : public std::ostream {
+public:
+    /// Constructs an ostream adapter.
+    ///
+    /// :param ofs: The OpenEye output file stream to adapt.
+    explicit OutputStreamAdapter(OEPlatform::oeofstream& ofs);
+
+private:
+    OEOutputStreamBuf buf_;
+};
+
+/// Creates a shared_ptr<std::ostream> from an oeofstream for use with maeparser Writer.
+///
+/// :param ofs: The OpenEye output file stream to adapt.
+/// :returns: Shared pointer to an ostream wrapping the oeofstream.
+std::shared_ptr<std::ostream> make_maeparser_ostream(OEPlatform::oeofstream& ofs);
+
 }  // namespace OEMaestro
 
 #endif  // OEMAESTRO_STREAMADAPTER_H
