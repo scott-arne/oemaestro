@@ -201,10 +201,14 @@ _preload_shared_libs()
 def _preload_bundled_libs():
     """Preload libraries bundled by auditwheel from the .libs directory.
 
-    auditwheel repair bundles non-manylinux dependencies (e.g. libbz2 from
-    boost::iostreams) into an ``oemaestro.libs/`` directory next to the
-    package. The bundled copies have hashed filenames and must be loaded
-    before the C extension to satisfy its DT_NEEDED entries.
+    auditwheel repair bundles non-manylinux dependencies (e.g. libbz2,
+    ICU libraries from boost) into an ``oemaestro.libs/`` directory next
+    to the package. The bundled copies have hashed filenames and must be
+    loaded before the C extension to satisfy its DT_NEEDED entries.
+
+    Libraries may have inter-dependencies (e.g. libicui18n depends on
+    libicuuc which depends on libicudata), so we do multiple passes
+    until no new libraries can be loaded.
     """
     import sys
     if sys.platform != 'linux':
@@ -215,13 +219,24 @@ def _preload_bundled_libs():
     site_dir = os.path.dirname(pkg_dir)
     for libs_name in ('oemaestro.libs', '.oemaestro.libs'):
         libs_dir = os.path.join(site_dir, libs_name)
-        if os.path.isdir(libs_dir):
-            for f in sorted(os.listdir(libs_dir)):
-                if '.so' in f:
-                    try:
-                        ctypes.CDLL(os.path.join(libs_dir, f), mode=ctypes.RTLD_GLOBAL)
-                    except OSError:
-                        pass
+        if not os.path.isdir(libs_dir):
+            continue
+        remaining = [
+            os.path.join(libs_dir, f)
+            for f in sorted(os.listdir(libs_dir))
+            if '.so' in f
+        ]
+        # Multi-pass: keep retrying until no progress (handles dep ordering)
+        while remaining:
+            failed = []
+            for lib_path in remaining:
+                try:
+                    ctypes.CDLL(lib_path, mode=ctypes.RTLD_GLOBAL)
+                except OSError:
+                    failed.append(lib_path)
+            if len(failed) == len(remaining):
+                break  # No progress, stop
+            remaining = failed
 
 
 _preload_bundled_libs()

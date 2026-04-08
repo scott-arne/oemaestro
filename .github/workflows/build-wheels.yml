@@ -141,6 +141,16 @@ jobs:
         run: |
           /opt/venv/bin/pip install pytest
           /opt/venv/bin/pip install dist/oemaestro-*.whl
+          echo "--- Installed package layout ---"
+          SITE=$(/opt/venv/bin/python -c "import site; print(site.getsitepackages()[0])")
+          ls -la "$SITE/oemaestro/" || true
+          ls -la "$SITE/oemaestro.libs/" || true
+          ls -la "$SITE/.oemaestro.libs/" || true
+          echo "--- RPATH on _oemaestro.so ---"
+          SO_FILE=$(find "$SITE/oemaestro" -name '_oemaestro*.so' | head -1)
+          patchelf --print-rpath "$SO_FILE" 2>/dev/null || readelf -d "$SO_FILE" 2>/dev/null | grep -i rpath || true
+          echo "--- Testing import ---"
+          /opt/venv/bin/python -c "import oemaestro; print('Import OK')"
           /opt/venv/bin/pytest tests/python/ -v -s
 
       - name: List built artifacts
