@@ -197,6 +197,35 @@ _ensure_library_compat()
 # include the OpenEye library directory after auditwheel repair)
 _preload_shared_libs()
 
+
+def _preload_bundled_libs():
+    """Preload libraries bundled by auditwheel from the .libs directory.
+
+    auditwheel repair bundles non-manylinux dependencies (e.g. libbz2 from
+    boost::iostreams) into an ``oemaestro.libs/`` directory next to the
+    package. The bundled copies have hashed filenames and must be loaded
+    before the C extension to satisfy its DT_NEEDED entries.
+    """
+    import sys
+    if sys.platform != 'linux':
+        return
+
+    import ctypes
+    pkg_dir = os.path.dirname(os.path.abspath(__file__))
+    site_dir = os.path.dirname(pkg_dir)
+    for libs_name in ('oemaestro.libs', '.oemaestro.libs'):
+        libs_dir = os.path.join(site_dir, libs_name)
+        if os.path.isdir(libs_dir):
+            for f in sorted(os.listdir(libs_dir)):
+                if '.so' in f:
+                    try:
+                        ctypes.CDLL(os.path.join(libs_dir, f), mode=ctypes.RTLD_GLOBAL)
+                    except OSError:
+                        pass
+
+
+_preload_bundled_libs()
+
 # Check OpenEye version on import
 _check_openeye_version()
 
