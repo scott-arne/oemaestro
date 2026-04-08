@@ -4,7 +4,6 @@
 
 #include <oechem.h>
 #include <cerrno>
-#include <cstdlib>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -176,7 +175,7 @@ void MolConverter::ApplyDataTags(const MaestroMol& maestro_mol,
 
     // Atom-level properties -> typed generic data on atoms
     for (OESystem::OEIter<OEChem::OEAtomBase> ai = mol.GetAtoms(); ai; ++ai) {
-        size_t idx = ai->GetIdx();
+        size_t idx = ai->GetIdx();  // NOLINT
         if (idx < maestro_mol.atoms.size()) {
             for (const auto& [key, val] : maestro_mol.atoms[idx].properties) {
                 const std::string& tag = format_tag(key);

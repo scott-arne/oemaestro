@@ -553,7 +553,7 @@ class TestCLI:
         from oemaestro import __version__
         assert __version__ in result.stdout
 
-    def test_convert(self, data_dir):
+    def test_convert_to_sdf(self, data_dir):
         """Verify CLI converts a Maestro file to SDF."""
         import subprocess
         import sys
@@ -568,5 +568,45 @@ class TestCLI:
             )
             assert result.returncode == 0
             assert os.path.getsize(out_path) > 0
+        finally:
+            os.unlink(out_path)
+
+    def test_convert_to_mae(self, data_dir):
+        """Verify CLI converts a Maestro file to Maestro."""
+        import subprocess
+        import sys
+        import tempfile
+        from oemaestro import OEMaestroReader
+        with tempfile.NamedTemporaryFile(suffix='.mae', delete=False) as f:
+            out_path = f.name
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'oemaestro.cli',
+                 f'{data_dir}/multi.mae', out_path, '--quiet'],
+                capture_output=True, text=True, timeout=30,
+            )
+            assert result.returncode == 0
+            mols = list(OEMaestroReader(out_path))
+            assert len(mols) == 2
+        finally:
+            os.unlink(out_path)
+
+    def test_convert_to_maegz(self, data_dir):
+        """Verify CLI converts a Maestro file to compressed Maestro."""
+        import subprocess
+        import sys
+        import tempfile
+        from oemaestro import OEMaestroReader
+        with tempfile.NamedTemporaryFile(suffix='.maegz', delete=False) as f:
+            out_path = f.name
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'oemaestro.cli',
+                 f'{data_dir}/simple.mae', out_path, '--quiet'],
+                capture_output=True, text=True, timeout=30,
+            )
+            assert result.returncode == 0
+            mols = list(OEMaestroReader(out_path))
+            assert len(mols) == 1
         finally:
             os.unlink(out_path)

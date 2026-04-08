@@ -12,6 +12,7 @@ from oemaestro import (
     __version__,
     OEMaestroReader,
     OEMaestroReaderConfig,
+    OEMaestroWriter,
     TAG_NONE, TAG_TYPE, TAG_OWNER, TAG_NAME, TAG_ALL,
     PERCEPTION_NONE, PERCEPTION_CONNECTIVITY, PERCEPTION_RINGS,
     PERCEPTION_BOND_ORDERS, PERCEPTION_IMPLICIT_HYDROGENS,
@@ -37,6 +38,9 @@ SUPPORTED_OUTPUT_EXTENSIONS = {
     ".csv": "CSV",
     ".mol": "MDL Molfile",
     ".can": "Canonical SMILES",
+    ".mae": "Maestro",
+    ".mae.gz": "Maestro (compressed)",
+    ".maegz": "Maestro (compressed)",
 }
 
 TAG_CHOICES = {
@@ -184,13 +188,16 @@ def _parse_perception_flags(values):
 )
 def cli(input_file, output_file, tags, perception, conf_test, title_field,
         count, append, quiet, sd_tag_filter, threads):
-    """Convert a Maestro file to an OpenEye-supported format.
+    """Convert a Maestro file to another molecular format.
 
     Reads molecules from INPUT_FILE (.mae, .mae.gz, .maegz) and writes
     them to OUTPUT_FILE in the format determined by its extension.
 
     \b
     Supported output formats:
+      .mae            Maestro
+      .mae.gz         Maestro (compressed)
+      .maegz          Maestro (compressed)
       .sdf            SD file
       .mol2           Tripos Mol2
       .pdb            Protein Data Bank
@@ -268,15 +275,23 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
     if ct_conf_test is not None:
         reader.set_conf_test(ct_conf_test)
 
-    ofs = oechem.oemolostream()
-    if append:
-        ofs.openappend(str(output_path))
-    else:
-        ofs.open(str(output_path))
+    # Determine if output is Maestro format (use OEMaestroWriter) or OpenEye format
+    mae_output = out_ext in MAESTRO_EXTENSIONS
 
-    if not ofs.IsValid():
-        click.secho(f"Error: Cannot open output file '{output_path}'", fg="red", err=True)
-        sys.exit(1)
+    if mae_output:
+        from oemaestro import WRITE_APPEND, WRITE_CREATE
+        mode = WRITE_APPEND if append else WRITE_CREATE
+        writer = OEMaestroWriter(str(output_path), mode=mode)
+    else:
+        ofs = oechem.oemolostream()
+        if append:
+            ofs.openappend(str(output_path))
+        else:
+            ofs.open(str(output_path))
+
+        if not ofs.IsValid():
+            click.secho(f"Error: Cannot open output file '{output_path}'", fg="red", err=True)
+            sys.exit(1)
 
     import fnmatch
 
@@ -290,6 +305,12 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
                 to_remove.append(tag_name)
         for tag_name in to_remove:
             mol.DeleteData(oechem.OEGetTag(tag_name))
+
+    def _write_mol(mol):
+        if mae_output:
+            writer.write(mol)
+        else:
+            oechem.OEWriteMolecule(ofs, mol)
 
     from rich.console import Console
 
@@ -307,7 +328,7 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
                 if title:
                     mol.SetTitle(title)
             _filter_data_tags(mol)
-            oechem.OEWriteMolecule(ofs, mol)
+            _write_mol(mol)
             mol_count += 1
             if count and mol_count >= count:
                 break
@@ -319,13 +340,16 @@ def cli(input_file, output_file, tags, perception, conf_test, title_field,
                     if title:
                         mol.SetTitle(title)
                 _filter_data_tags(mol)
-                oechem.OEWriteMolecule(ofs, mol)
+                _write_mol(mol)
                 mol_count += 1
                 status.update(_status_text())
                 if count and mol_count >= count:
                     break
 
-    ofs.close()
+    if mae_output:
+        writer.close()
+    else:
+        ofs.close()
 
     if not quiet:
         label = "structure" if mol_count == 1 else "structures"
