@@ -1,4 +1,5 @@
 """Unit tests for oemaestro Python bindings."""
+import os
 import pytest
 
 try:
@@ -526,3 +527,46 @@ class TestThreadedReading:
         """Verify PERCEPTION_DEFAULT is accessible from Python."""
         from oemaestro import PERCEPTION_DEFAULT, PERCEPTION_ALL
         assert PERCEPTION_DEFAULT != PERCEPTION_ALL
+
+
+class TestCLI:
+    def test_help(self):
+        """Verify CLI --help runs without import errors."""
+        import subprocess
+        import sys
+        result = subprocess.run(
+            [sys.executable, '-m', 'oemaestro.cli', '--help'],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0
+        assert 'Usage' in result.stdout
+
+    def test_version(self):
+        """Verify CLI --version returns the package version."""
+        import subprocess
+        import sys
+        result = subprocess.run(
+            [sys.executable, '-m', 'oemaestro.cli', '--version'],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0
+        from oemaestro import __version__
+        assert __version__ in result.stdout
+
+    def test_convert(self, data_dir):
+        """Verify CLI converts a Maestro file to SDF."""
+        import subprocess
+        import sys
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.sdf', delete=False) as f:
+            out_path = f.name
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'oemaestro.cli',
+                 f'{data_dir}/simple.mae', out_path, '--quiet'],
+                capture_output=True, text=True, timeout=30,
+            )
+            assert result.returncode == 0
+            assert os.path.getsize(out_path) > 0
+        finally:
+            os.unlink(out_path)

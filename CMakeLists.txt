@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.5.0 LANGUAGES CXX)
+project(oemaestro VERSION 0.5.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,7 +32,7 @@ include(FetchContent)
 FetchContent_Declare(
     cmake_openeye
     GIT_REPOSITORY https://github.com/scott-arne/cmake-openeye.git
-    GIT_TAG v1.0.1
+    GIT_TAG v1.0.2
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(cmake_openeye)
