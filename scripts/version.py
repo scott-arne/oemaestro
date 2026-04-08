@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Manage version numbers across the oemaestro project.
 
+Supports full PEP 440 version specifications including pre-release
+(alpha, beta, rc), post-release, and dev suffixes.
+
 Provides commands to display, bump, and sync the version consistently
 across CMakeLists.txt, Python packages, and the C++ umbrella header.
 
@@ -11,12 +14,13 @@ Usage::
     python scripts/version.py bump minor
     python scripts/version.py bump major
     python scripts/version.py sync 1.0.0
-    python scripts/version.py sync 1.0.0 --yes
+    python scripts/version.py sync 1.0.0rc1
+    python scripts/version.py sync 1.0.0-rc1 --yes
 """
 
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -29,6 +33,117 @@ console = Console()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+# PEP 440 pre-release labels and their normalized forms
+_PRE_LABELS = {
+    "a": "a", "alpha": "a",
+    "b": "b", "beta": "b",
+    "c": "rc", "rc": "rc", "preview": "rc",
+}
+
+# Regex for full PEP 440 version parsing (accepts common non-normalized forms)
+_PEP440_RE = re.compile(
+    r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
+    r"(?:"
+    r"[-.]?(?P<pre_label>a|alpha|b|beta|c|rc|preview)[-.]?(?P<pre_num>\d+)"
+    r")?"
+    r"(?:"
+    r"[.]?(?:post)[-.]?(?P<post_num>\d+)"
+    r")?"
+    r"(?:"
+    r"[.]?(?:dev)[-.]?(?P<dev_num>\d+)"
+    r")?$",
+    re.IGNORECASE,
+)
+
+
+# ============================================================================
+# Version data model
+# ============================================================================
+
+
+@dataclass
+class Version:
+    """A PEP 440 version with base release and optional suffixes."""
+
+    major: int
+    minor: int
+    patch: int
+    pre: Optional[tuple[str, int]] = None    # ("a"|"b"|"rc", N)
+    post: Optional[int] = None               # post-release number
+    dev: Optional[int] = None                # dev-release number
+
+    @property
+    def base(self) -> str:
+        """Return the MAJOR.MINOR.PATCH base version string."""
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+    @property
+    def full(self) -> str:
+        """Return the full PEP 440 normalized version string."""
+        v = self.base
+        if self.pre is not None:
+            v += f"{self.pre[0]}{self.pre[1]}"
+        if self.post is not None:
+            v += f".post{self.post}"
+        if self.dev is not None:
+            v += f".dev{self.dev}"
+        return v
+
+    @property
+    def info_tuple(self) -> str:
+        """Return the version_info tuple string (base integers only)."""
+        return f"{self.major}, {self.minor}, {self.patch}"
+
+    @property
+    def is_release(self) -> bool:
+        """Return True if this is a final release (no pre/post/dev suffix)."""
+        return self.pre is None and self.post is None and self.dev is None
+
+    def __str__(self) -> str:
+        return self.full
+
+
+def parse_version(version_str: str) -> Version:
+    """Parse a version string into a Version object.
+
+    Accepts PEP 440 versions and common variants with hyphens/dots as
+    separators (e.g. ``0.5.1-rc1``, ``0.5.1.rc1``, ``0.5.1rc1``).
+    Also handles comma-separated tuples (``0, 5, 1``) for reading
+    ``__version_info__``.
+
+    :param version_str: Version string in any supported format.
+    :returns: Parsed Version object.
+    :raises ValueError: If the string cannot be parsed.
+    """
+    raw = version_str.strip()
+
+    # Handle comma-separated tuple format from __version_info__
+    if "," in raw:
+        parts = [p.strip() for p in raw.split(",")]
+        if len(parts) < 3:
+            raise ValueError(f"Cannot parse version: {version_str}")
+        return Version(int(parts[0]), int(parts[1]), int(parts[2]))
+
+    m = _PEP440_RE.match(raw)
+    if not m:
+        raise ValueError(f"Cannot parse version: {version_str}")
+
+    pre = None
+    if m.group("pre_label"):
+        label = _PRE_LABELS[m.group("pre_label").lower()]
+        pre = (label, int(m.group("pre_num")))
+
+    post = int(m.group("post_num")) if m.group("post_num") else None
+    dev = int(m.group("dev_num")) if m.group("dev_num") else None
+
+    return Version(
+        major=int(m.group("major")),
+        minor=int(m.group("minor")),
+        patch=int(m.group("patch")),
+        pre=pre, post=post, dev=dev,
+    )
+
+
 # ============================================================================
 # Version file definitions
 # ============================================================================
@@ -36,13 +151,18 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 @dataclass
 class VersionLocation:
-    """A file location containing a version string."""
+    """A file location containing a version string.
+
+    :param base_only: If True, only the MAJOR.MINOR.PATCH base version is
+        written (used for CMake, C++ headers that don't support PEP 440).
+    """
 
     file: Path
     label: str
     pattern: str
     replacement: str
     extract: str
+    base_only: bool = False
 
     def read_version(self) -> Optional[str]:
         """Extract the current version string from this location.
@@ -57,31 +177,33 @@ class VersionLocation:
             return match.group(1)
         return None
 
-    def read_version_tuple(self) -> Optional[tuple[int, int, int]]:
-        """Extract the current version as a parsed (major, minor, patch) tuple.
+    def read_version_parsed(self) -> Optional[Version]:
+        """Extract the current version as a parsed Version object.
 
-        :returns: Version tuple or None if not found or unparseable.
+        :returns: Version or None if not found or unparseable.
         """
         raw = self.read_version()
         if raw is None:
             return None
         try:
-            return _parse_version(raw)
+            return parse_version(raw)
         except ValueError:
             return None
 
-    def update_version(self, major: int, minor: int, patch: int) -> bool:
+    def update_version(self, ver: Version) -> bool:
         """Replace the version string in this file.
 
-        :param major: Major version number.
-        :param minor: Minor version number.
-        :param patch: Patch version number.
+        :param ver: Version to write.
         :returns: True if the file was modified.
         """
         if not self.file.exists():
             return False
         content = self.file.read_text()
-        new = self.replacement.format(major=major, minor=minor, patch=patch)
+        version_str = ver.base if self.base_only else ver.full
+        new = self.replacement.format(
+            major=ver.major, minor=ver.minor, patch=ver.patch,
+            version=version_str, info_tuple=ver.info_tuple,
+        )
         new_content, count = re.subn(self.pattern, new, content, flags=re.MULTILINE)
         if count == 0:
             return False
@@ -92,13 +214,14 @@ class VersionLocation:
 def _locations() -> list[VersionLocation]:
     """Return all version locations in the project."""
     return [
-        # C++ header defines
+        # C++ header defines (base version only — integers)
         VersionLocation(
             file=PROJECT_ROOT / "include" / "oemaestro" / "oemaestro.h",
             label="C++ header (MAJOR)",
             pattern=r"#define OEMAESTRO_VERSION_MAJOR \d+",
             replacement="#define OEMAESTRO_VERSION_MAJOR {major}",
             extract=r"#define OEMAESTRO_VERSION_MAJOR (\d+)",
+            base_only=True,
         ),
         VersionLocation(
             file=PROJECT_ROOT / "include" / "oemaestro" / "oemaestro.h",
@@ -106,6 +229,7 @@ def _locations() -> list[VersionLocation]:
             pattern=r"#define OEMAESTRO_VERSION_MINOR \d+",
             replacement="#define OEMAESTRO_VERSION_MINOR {minor}",
             extract=r"#define OEMAESTRO_VERSION_MINOR (\d+)",
+            base_only=True,
         ),
         VersionLocation(
             file=PROJECT_ROOT / "include" / "oemaestro" / "oemaestro.h",
@@ -113,98 +237,70 @@ def _locations() -> list[VersionLocation]:
             pattern=r"#define OEMAESTRO_VERSION_PATCH \d+",
             replacement="#define OEMAESTRO_VERSION_PATCH {patch}",
             extract=r"#define OEMAESTRO_VERSION_PATCH (\d+)",
+            base_only=True,
         ),
-        # CMakeLists.txt
+        # CMakeLists.txt (base version only — CMake VERSION doesn't support PEP 440)
         VersionLocation(
             file=PROJECT_ROOT / "CMakeLists.txt",
             label="CMakeLists.txt",
             pattern=r"(project\(oemaestro VERSION )\d+\.\d+\.\d+",
             replacement=r"\g<1>{major}.{minor}.{patch}",
             extract=r"project\(oemaestro VERSION (\d+\.\d+\.\d+)",
+            base_only=True,
         ),
-        # pyproject.toml (root — wheel build)
+        # pyproject.toml (root — wheel build, full PEP 440)
         VersionLocation(
             file=PROJECT_ROOT / "pyproject.toml",
             label="oemaestro pyproject.toml",
-            pattern=r'(^version\s*=\s*")[\d.]+(")',
-            replacement=r'\g<1>{major}.{minor}.{patch}\g<2>',
-            extract=r'^version\s*=\s*"([\d.]+)"',
+            pattern=r'(^version\s*=\s*")[^"]+(")',
+            replacement=r'\g<1>{version}\g<2>',
+            extract=r'^version\s*=\s*"([^"]+)"',
         ),
-        # pyproject.toml (python/ — editable dev install)
+        # pyproject.toml (python/ — editable dev install, full PEP 440)
         VersionLocation(
             file=PROJECT_ROOT / "python" / "pyproject.toml",
             label="python/ pyproject.toml",
-            pattern=r'(^version\s*=\s*")[\d.]+(")',
-            replacement=r'\g<1>{major}.{minor}.{patch}\g<2>',
-            extract=r'^version\s*=\s*"([\d.]+)"',
+            pattern=r'(^version\s*=\s*")[^"]+(")',
+            replacement=r'\g<1>{version}\g<2>',
+            extract=r'^version\s*=\s*"([^"]+)"',
         ),
-        # __init__.py __version__
+        # __init__.py __version__ (full PEP 440)
         VersionLocation(
             file=PROJECT_ROOT / "python" / "oemaestro" / "__init__.py",
             label="oemaestro __version__",
-            pattern=r'(__version__\s*=\s*")[\d.]+(")',
-            replacement=r'\g<1>{major}.{minor}.{patch}\g<2>',
-            extract=r'__version__\s*=\s*"([\d.]+)"',
+            pattern=r'(__version__\s*=\s*")[^"]+(")',
+            replacement=r'\g<1>{version}\g<2>',
+            extract=r'__version__\s*=\s*"([^"]+)"',
         ),
-        # __init__.py __version_info__
+        # __init__.py __version_info__ (base version only — integer tuple)
         VersionLocation(
             file=PROJECT_ROOT / "python" / "oemaestro" / "__init__.py",
             label="oemaestro __version_info__",
-            pattern=r"(__version_info__\s*=\s*\()[\d, ]+(\))",
-            replacement=r"\g<1>{major}, {minor}, {patch}\g<2>",
-            extract=r"__version_info__\s*=\s*\(([\d, ]+)\)",
+            pattern=r"(__version_info__\s*=\s*\()[^)]+(\))",
+            replacement=r"\g<1>{info_tuple}\g<2>",
+            extract=r"__version_info__\s*=\s*\(([^)]+)\)",
+            base_only=True,
         ),
     ]
 
 
-def _parse_version(version_str: str) -> tuple[int, int, int]:
-    """Parse a version string into (major, minor, patch).
-
-    Handles dotted strings ("0.1.0"), comma-separated tuples ("0, 1, 0"),
-    and major.minor-only strings ("0.1").
-
-    :param version_str: Version string in any supported format.
-    :returns: Tuple of (major, minor, patch).
-    :raises ValueError: If the string cannot be parsed.
-    """
-    parts = version_str.strip().replace(",", ".").replace(" ", "").split(".")
-    parts = [p for p in parts if p]
-    if len(parts) < 2:
-        raise ValueError(f"Cannot parse version: {version_str}")
-    major = int(parts[0])
-    minor = int(parts[1])
-    patch = int(parts[2]) if len(parts) > 2 else 0
-    return major, minor, patch
-
-
-def _format_version(v: tuple[int, int, int]) -> str:
-    """Format a version tuple as MAJOR.MINOR.PATCH.
-
-    :param v: Version tuple.
-    :returns: Formatted version string.
-    """
-    return f"{v[0]}.{v[1]}.{v[2]}"
-
-
-def _get_canonical_version() -> Optional[tuple[int, int, int]]:
+def _get_canonical_version() -> Optional[Version]:
     """Read the canonical version from the root pyproject.toml.
 
-    :returns: Tuple of (major, minor, patch) or None.
+    :returns: Version or None.
     """
     for loc in _locations():
         if loc.label == "oemaestro pyproject.toml":
-            return loc.read_version_tuple()
+            return loc.read_version_parsed()
     return None
 
 
-def _update_all(locations: list[VersionLocation], major: int, minor: int,
-                patch: int, dry_run: bool = False) -> Table:
+def _update_all(locations: list[VersionLocation], ver: Version,
+                dry_run: bool = False) -> Table:
     """Update all version locations and return a results table.
 
     :param locations: Version locations to update.
-    :param major: Major version number.
-    :param minor: Minor version number.
-    :param patch: Patch version number.
+    :param ver: Version to write.
     :param dry_run: If True, do not write files.
     :returns: Rich Table with results.
     """
@@ -217,23 +313,29 @@ def _update_all(locations: list[VersionLocation], major: int, minor: int,
     )
     table.add_column("File", style="blue", max_width=45)
     table.add_column("Location", style="dim")
+    table.add_column("Version", justify="center")
     table.add_column("Result", justify="center")
 
     for loc in locations:
         rel_path = str(loc.file.relative_to(PROJECT_ROOT))
+        target_str = ver.base if loc.base_only else ver.full
 
         if not loc.file.exists():
-            table.add_row(rel_path, loc.label, "[yellow]skipped (not found)[/yellow]")
+            table.add_row(rel_path, loc.label, target_str,
+                          "[yellow]skipped (not found)[/yellow]")
             continue
 
         if dry_run:
-            table.add_row(rel_path, loc.label, "[cyan]would update[/cyan]")
+            table.add_row(rel_path, loc.label, target_str,
+                          "[cyan]would update[/cyan]")
         else:
-            ok = loc.update_version(major, minor, patch)
+            ok = loc.update_version(ver)
             if ok:
-                table.add_row(rel_path, loc.label, "[green]updated[/green]")
+                table.add_row(rel_path, loc.label, target_str,
+                              "[green]updated[/green]")
             else:
-                table.add_row(rel_path, loc.label, "[red]pattern not matched[/red]")
+                table.add_row(rel_path, loc.label, target_str,
+                              "[red]pattern not matched[/red]")
 
     return table
 
@@ -285,11 +387,12 @@ def get():
 
         rel_path = str(cpp_header_locs[0].file.relative_to(PROJECT_ROOT))
         if all(v is not None for v in components.values()):
-            parsed = (int(components["MAJOR"]), int(components["MINOR"]), int(components["PATCH"]))
-            ver_display = _format_version(parsed)
+            parsed = Version(int(components["MAJOR"]), int(components["MINOR"]),
+                             int(components["PATCH"]))
+            ver_display = parsed.base
             if canonical is None:
                 status = "[dim]?[/dim]"
-            elif parsed == canonical:
+            elif parsed.base == canonical.base:
                 status = "[green]ok[/green]"
             else:
                 status = "[red]mismatch[/red]"
@@ -303,7 +406,7 @@ def get():
         table.add_row(rel_path, "C++ header", ver_display, status)
 
     for loc in other_locs:
-        parsed = loc.read_version_tuple()
+        parsed = loc.read_version_parsed()
         rel_path = str(loc.file.relative_to(PROJECT_ROOT))
 
         if parsed is None:
@@ -312,14 +415,20 @@ def get():
             all_ok = False
         elif canonical is None:
             status = "[dim]?[/dim]"
-            ver_display = _format_version(parsed)
-        elif parsed == canonical:
-            status = "[green]ok[/green]"
-            ver_display = _format_version(parsed)
+            ver_display = parsed.full
         else:
-            status = "[red]mismatch[/red]"
-            all_ok = False
-            ver_display = f"[red]{_format_version(parsed)}[/red]"
+            # Compare base for base_only locations, full for others
+            if loc.base_only:
+                matches = parsed.base == canonical.base
+            else:
+                matches = parsed.full == canonical.full
+            if matches:
+                status = "[green]ok[/green]"
+                ver_display = parsed.base if loc.base_only else parsed.full
+            else:
+                status = "[red]mismatch[/red]"
+                all_ok = False
+                ver_display = f"[red]{parsed.base if loc.base_only else parsed.full}[/red]"
 
         table.add_row(rel_path, loc.label, ver_display, status)
 
@@ -328,7 +437,7 @@ def get():
     console.print()
 
     if canonical:
-        console.print(f"  Canonical version: [bold]{_format_version(canonical)}[/bold]")
+        console.print(f"  Canonical version: [bold]{canonical.full}[/bold]")
     if all_ok:
         console.print("  [green]All version numbers are consistent.[/green]")
     else:
@@ -343,32 +452,28 @@ def bump(part: str, dry_run: bool):
     """Bump the version number across all project files.
 
     PART must be one of: major, minor, patch.
+
+    Bumping always produces a final release (any pre/post/dev suffix is cleared).
     """
     canonical = _get_canonical_version()
     if canonical is None:
         console.print("[red]Could not read current version from pyproject.toml[/red]")
         sys.exit(1)
 
-    major, minor, patch = canonical
-    old_version = _format_version(canonical)
+    old_version = canonical.full
 
     if part == "major":
-        major += 1
-        minor = 0
-        patch = 0
+        new = Version(canonical.major + 1, 0, 0)
     elif part == "minor":
-        minor += 1
-        patch = 0
+        new = Version(canonical.major, canonical.minor + 1, 0)
     else:
-        patch += 1
-
-    new_version = f"{major}.{minor}.{patch}"
+        new = Version(canonical.major, canonical.minor, canonical.patch + 1)
 
     console.print()
-    console.print(f"  Version bump: [bold red]{old_version}[/bold red] -> [bold green]{new_version}[/bold green]")
+    console.print(f"  Version bump: [bold red]{old_version}[/bold red] -> [bold green]{new.full}[/bold green]")
     console.print()
 
-    table = _update_all(_locations(), major, minor, patch, dry_run=dry_run)
+    table = _update_all(_locations(), new, dry_run=dry_run)
     console.print(table)
     console.print()
 
@@ -376,7 +481,7 @@ def bump(part: str, dry_run: bool):
         console.print("  [yellow]Dry run — no files were modified.[/yellow]")
         console.print(f"  Run [bold]python scripts/version.py bump {part}[/bold] to apply.")
     else:
-        console.print(f"  [green]Version bumped to {new_version} in all files.[/green]")
+        console.print(f"  [green]Version bumped to {new.full} in all files.[/green]")
     console.print()
 
 
@@ -387,30 +492,43 @@ def bump(part: str, dry_run: bool):
 def sync(version: str, yes: bool, dry_run: bool):
     """Set all version numbers to VERSION across the entire project.
 
-    VERSION must be in MAJOR.MINOR.PATCH format (e.g. 1.0.0).
+    VERSION supports full PEP 440 specification:
+
+    \b
+      0.5.1          Final release
+      0.5.1a1        Alpha pre-release
+      0.5.1b1        Beta pre-release
+      0.5.1rc1       Release candidate
+      0.5.1-rc1      Release candidate (alternative separator)
+      0.5.1.post1    Post-release
+      0.5.1.dev1     Development release
+      0.5.1rc1.dev2  Combined pre + dev
+
+    For CMake and C++ files, only the base MAJOR.MINOR.PATCH is written.
     """
     try:
-        major, minor, patch = _parse_version(version)
+        ver = parse_version(version)
     except ValueError:
         console.print(f"[red]Invalid version format: {version}[/red]")
-        console.print("  Expected MAJOR.MINOR.PATCH (e.g. 1.0.0)")
+        console.print("  Expected PEP 440 version (e.g. 1.0.0, 1.0.0rc1, 1.0.0.post1)")
         sys.exit(1)
 
-    target = f"{major}.{minor}.{patch}"
     locations = _locations()
-    file_count = sum(1 for loc in locations if loc.file.exists())
+    existing_files = sorted(set(
+        str(loc.file.relative_to(PROJECT_ROOT))
+        for loc in locations if loc.file.exists()
+    ))
 
     console.print()
 
     if not dry_run and not yes:
-        console.print(f"  [bold yellow]This will set the version to {target} in "
-                       f"{file_count} locations across {len(set(loc.file for loc in locations if loc.file.exists()))} files.[/bold yellow]")
+        console.print(f"  [bold yellow]This will set the version to {ver.full} in "
+                       f"{len(existing_files)} files.[/bold yellow]")
+        if not ver.is_release:
+            console.print(f"  [dim]Base version {ver.base} will be used for CMake/C++ files.[/dim]")
         console.print()
         console.print("  Files that will be modified:")
-        for path in sorted(set(
-            str(loc.file.relative_to(PROJECT_ROOT))
-            for loc in locations if loc.file.exists()
-        )):
+        for path in existing_files:
             console.print(f"    - {path}")
         console.print()
         if not click.confirm("  Proceed?"):
@@ -418,15 +536,15 @@ def sync(version: str, yes: bool, dry_run: bool):
             sys.exit(0)
         console.print()
 
-    table = _update_all(locations, major, minor, patch, dry_run=dry_run)
+    table = _update_all(locations, ver, dry_run=dry_run)
     console.print(table)
     console.print()
 
     if dry_run:
         console.print("  [yellow]Dry run — no files were modified.[/yellow]")
-        console.print(f"  Run [bold]python scripts/version.py sync {target} --yes[/bold] to apply.")
+        console.print(f"  Run [bold]python scripts/version.py sync {ver.full} --yes[/bold] to apply.")
     else:
-        console.print(f"  [green]All versions set to {target}.[/green]")
+        console.print(f"  [green]All versions set to {ver.full}.[/green]")
     console.print()
 
 

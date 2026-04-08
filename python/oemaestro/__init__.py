@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.5.0"
-__version_info__ = (0, 5, 0)
+__version__ = "0.5.1rc1"
+__version_info__ = (0, 5, 1)
 
 
 def _default_num_threads():
@@ -39,7 +39,9 @@ def _ensure_library_compat():
     linker fails to load the extension.
 
     This function detects version mismatches and creates symlinks from the expected
-    (build-time) library names to the actual (runtime) library files.
+    (build-time) library names to the actual (runtime) library files. Symlinks are
+    created in the OpenEye library directory (where the RPATH points) so the dynamic
+    linker finds them via normal search paths.
     """
     try:
         from . import _build_info
@@ -62,23 +64,19 @@ def _ensure_library_compat():
     if not os.path.isdir(oe_lib_dir):
         return False
 
-    pkg_dir = os.path.dirname(__file__)
     created_any = False
 
     for expected_name in expected_libs:
-        if os.path.exists(os.path.join(oe_lib_dir, expected_name)):
+        expected_path = os.path.join(oe_lib_dir, expected_name)
+        if os.path.exists(expected_path):
             continue
 
-        symlink_path = os.path.join(pkg_dir, expected_name)
-        if os.path.islink(symlink_path):
-            if os.path.exists(symlink_path):
-                continue
+        # Clean up stale symlinks
+        if os.path.islink(expected_path):
             try:
-                os.unlink(symlink_path)
+                os.unlink(expected_path)
             except OSError:
                 continue
-        elif os.path.exists(symlink_path):
-            continue
 
         match = re.match(r'(lib\w+?)(-[\d.]+)?(\.[\d.]*\w+)$', expected_name)
         if not match:
@@ -92,9 +90,8 @@ def _ensure_library_compat():
                 break
 
         if actual_path:
-            symlink_path = os.path.join(pkg_dir, expected_name)
             try:
-                os.symlink(actual_path, symlink_path)
+                os.symlink(actual_path, expected_path)
                 created_any = True
             except OSError:
                 pass
@@ -103,15 +100,20 @@ def _ensure_library_compat():
 
 
 def _preload_shared_libs():
-    """Preload OpenEye shared libraries on Linux so _oemaestro can find them.
+    """Preload OpenEye shared libraries so _oemaestro can find them.
 
-    On Linux, auditwheel excludes OpenEye libraries from the wheel but the
-    resulting RUNPATH does not include the OpenEye library directory. This
-    function preloads all OpenEye shared libraries with RTLD_GLOBAL so the
-    dynamic linker can resolve them when _oemaestro is imported.
+    The wheel links against shared OpenEye libraries from openeye-toolkits,
+    but the RPATH/RUNPATH baked into _oemaestro.so at build time points to
+    the build machine's paths which don't exist at runtime. This function
+    preloads all OpenEye shared libraries with RTLD_GLOBAL so the dynamic
+    linker can resolve them when _oemaestro is imported.
+
+    On Linux, auditwheel excludes OpenEye libraries and RUNPATH may not
+    include the OpenEye library directory. On macOS, @rpath references
+    resolve to build-time paths. Both are fixed by preloading.
     """
     import sys
-    if sys.platform != 'linux':
+    if sys.platform not in ('linux', 'darwin'):
         return
 
     try:
@@ -135,21 +137,21 @@ def _preload_shared_libs():
 
     # Preload from the OpenEye library directory (handles version-match case)
     for f in sorted(os.listdir(oe_lib_dir)):
-        if f.endswith('.so') or '.so.' in f:
+        is_lib = f.endswith('.dylib') if sys.platform == 'darwin' else (f.endswith('.so') or '.so.' in f)
+        if is_lib:
             try:
                 ctypes.CDLL(os.path.join(oe_lib_dir, f), mode=ctypes.RTLD_GLOBAL)
             except OSError:
                 pass
 
-    # Preload symlinks from package directory (handles version-mismatch case
-    # when _ensure_library_compat() has created compatibility symlinks)
-    pkg_dir = os.path.dirname(__file__)
+    # Preload compatibility symlinks from OE lib dir (handles version-mismatch
+    # case when _ensure_library_compat() has created symlinks)
     expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
     for lib_name in expected_libs:
-        symlink = os.path.join(pkg_dir, lib_name)
-        if os.path.islink(symlink):
+        lib_path = os.path.join(oe_lib_dir, lib_name)
+        if os.path.islink(lib_path):
             try:
-                ctypes.CDLL(symlink, mode=ctypes.RTLD_GLOBAL)
+                ctypes.CDLL(lib_path, mode=ctypes.RTLD_GLOBAL)
             except OSError:
                 pass
 
