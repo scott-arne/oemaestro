@@ -49,6 +49,7 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(maeparser)
+set_target_properties(maeparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # maeparser unconditionally includes Boost headers (algorithm, dynamic_bitset,
 # spirit) even when Boost::iostreams is disabled.  Make the header-only Boost
