@@ -1,0 +1,29 @@
+[[locations]]
+file = "pyproject.toml"
+type = "pyproject-version"
+
+[[locations]]
+file = "python/pyproject.toml"
+type = "pyproject-version"
+
+[[locations]]
+file = "python/oemaestro/__init__.py"
+type = "python-dunder"
+
+[[locations]]
+file = "python/oemaestro/__init__.py"
+type = "python-version-info"
+
+[[locations]]
+file = "CMakeLists.txt"
+type = "cmake-project"
+
+[[locations]]
+file = "include/oemaestro/oemaestro.h"
+type = "c-define"
+prefix = "OEMAESTRO"
+
+[[locations]]
+file = "swig/oemaestro.i"
+type = "c-define"
+prefix = "OEMAESTRO"

@@ -12,7 +12,7 @@ namespace OEMaestro {
 
 /// Map Maestro i_m_secondary_structure values to OpenEye constants.
 /// Maestro: 0=loop/coil, 1=helix, 2=strand/sheet.
-static int MaestroSSToOE(int maestro_ss) {
+static int MaestroSSToOE(const int maestro_ss) {
     switch (maestro_ss) {
         case 1:  return OEBio::OESecondaryStructure::HelixAlpha;
         case 2:  return OEBio::OESecondaryStructure::Sheet;
@@ -23,7 +23,9 @@ static int MaestroSSToOE(int maestro_ss) {
 MolConverter::MolConverter()
     : tag_converter_(TAG_ALL), perception_(PERCEPTION_ALL) {}
 
+// ReSharper disable CppParameterMayBeConst
 MolConverter::MolConverter(OEMaestroTag tags, OEMaestroPerception perception)
+// ReSharper restore CppParameterMayBeConst
     : tag_converter_(tags), perception_(perception) {}
 
 void MolConverter::Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const {
@@ -310,9 +312,11 @@ void MolConverter::Convert(std::vector<MaestroMol>& dst,
     dst.clear();
 
     // Try to cast to OEMCMolBase to access conformers.
-    // Note: dynamic_cast<const OEMol*> fails with static OpenEye libraries (no RTTI),
+    // Note: dynamic_cast<const OEMol*> fails with static OpenEye libraries,
     // but OEMCMolBase cast works and provides GetConfs()/NumConfs().
+    // ReSharper disable CppTooWideScopeInitStatement
     const OEChem::OEMCMolBase* mc_ptr = dynamic_cast<const OEChem::OEMCMolBase*>(&src);  // NOLINT(modernize-use-auto)
+    // ReSharper restore CppTooWideScopeInitStatement
     if (mc_ptr && mc_ptr->NumConfs() > 1) {
         for (OESystem::OEIter<OEChem::OEConfBase> ci = mc_ptr->GetConfs(); ci; ++ci) {
             MaestroMol mmol;

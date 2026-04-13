@@ -435,6 +435,9 @@ class MaestroBondVector(object):
 
 # Register MaestroBondVector in _oemaestro:
 _oemaestro.MaestroBondVector_swigregister(MaestroBondVector)
+OEMAESTRO_VERSION_MAJOR = _oemaestro.OEMAESTRO_VERSION_MAJOR
+OEMAESTRO_VERSION_MINOR = _oemaestro.OEMAESTRO_VERSION_MINOR
+OEMAESTRO_VERSION_PATCH = _oemaestro.OEMAESTRO_VERSION_PATCH
 TAG_NONE = _oemaestro.TAG_NONE
 TAG_TYPE = _oemaestro.TAG_TYPE
 TAG_OWNER = _oemaestro.TAG_OWNER

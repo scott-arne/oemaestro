@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oemaestro"
-version = "0.5.2"
+version = "0.5.3"
 description = "Native Maestro format parser for OpenEye Toolkits"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -29,7 +29,7 @@ dependencies = ["openeye-toolkits>=2025.2", "rich-click>=1.7"]
 oemaestro = "oemaestro.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "vrzn>=0.1.0"]
 
 [tool.scikit-build]
 cmake.version = ">=3.21"
@@ -53,3 +53,23 @@ OEMAESTRO_UNIVERSAL2 = "OFF"
 testpaths = ["tests/python"]
 python_files = ["test_*.py"]
 addopts = "-v"
+
+# =============================================================================
+# TOML-driven build configuration for scripts/build_python.py
+# =============================================================================
+# This section is read by build_python.py to parameterize the build.
+# The script itself is identical across all projects — only this config changes.
+[tool.oe-build]
+package-name = "oemaestro"
+cmake-test-flag = "OEMAESTRO_BUILD_TESTS"
+rpath-strategy = "platform"  # "platform" = @loader_path/../openeye/libs/{platform}, "simple" = @loader_path
+
+# OpenEye libraries that are expected to be missing from delocate
+# (they are provided at runtime by openeye-toolkits, not bundled in the wheel)
+expected-missing-libs = [
+    "liboechem", "liboesystem", "liboeplatform",
+    "liboemath", "libzstd",
+]
+
+# Additional CMake defines passed during wheel build (beyond the standard ones)
+[tool.oe-build.extra-cmake-defines]
