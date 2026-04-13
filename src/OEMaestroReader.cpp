@@ -12,7 +12,15 @@
 
 namespace OEMaestro {
 
+namespace {
+bool IsGzipFilename(const std::string& f) {
+    return (f.size() >= 7 && f.substr(f.size() - 7) == ".mae.gz") ||
+           (f.size() >= 6 && f.substr(f.size() - 6) == ".maegz");
+}
+}  // namespace
+
 struct OEMaestroReader::Impl {
+    std::unique_ptr<OEPlatform::oeifstream> owned_ifs_;
     std::unique_ptr<MaestroReader> reader;
     MolConverter converter;
     std::unique_ptr<OEChem::OEConfTestBase> conf_test;
@@ -38,7 +46,12 @@ struct OEMaestroReader::Impl {
         : converter(config.GetTags(), config.GetPerception()),
           conf_test(std::make_unique<OEChem::OEDefaultConfTest>()),
           num_threads_((config.GetNumThreads() == 0) ? 1 : config.GetNumThreads()) {
-        reader = std::make_unique<MaestroReader>(filename);
+        if (IsGzipFilename(filename)) {
+            reader = std::make_unique<MaestroReader>(make_gzip_istream(filename));
+        } else {
+            owned_ifs_ = std::make_unique<OEPlatform::oeifstream>(filename);
+            reader = std::make_unique<MaestroReader>(make_maeparser_stream(*owned_ifs_));
+        }
         if (num_threads_ > 1) StartThreads();  // NOLINT(readability-simplify-boolean-expr)
     }
 

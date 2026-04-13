@@ -3,7 +3,10 @@
 
 #include <istream>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include <zlib.h>
 
 #include <oechem.h>
 
@@ -97,6 +100,70 @@ private:
 /// :param ofs: The OpenEye output file stream to adapt.
 /// :returns: Shared pointer to an ostream wrapping the oeofstream.
 std::shared_ptr<std::ostream> make_maeparser_ostream(OEPlatform::oeofstream& ofs);
+
+// --- Gzip stream adapters using zlib (universal2-safe) ---
+
+/// Streambuf that reads from a gzip file via zlib.
+class GzipInputBuf : public std::streambuf {
+public:
+    explicit GzipInputBuf(const std::string& filename, size_t buf_size = 4096);
+    ~GzipInputBuf() override;
+
+    GzipInputBuf(const GzipInputBuf&) = delete;
+    GzipInputBuf& operator=(const GzipInputBuf&) = delete;
+
+protected:
+    int_type underflow() override;
+
+private:
+    gzFile gz_;
+    std::vector<char> buffer_;
+};
+
+/// istream that reads from a gzip file.
+class GzipInputStream : public std::istream {
+public:
+    explicit GzipInputStream(const std::string& filename);
+
+private:
+    GzipInputBuf buf_;
+};
+
+/// Creates a shared_ptr<istream> for a gzip file, suitable for maeparser.
+std::shared_ptr<std::istream> make_gzip_istream(const std::string& filename);
+
+/// Streambuf that writes to a gzip file via zlib.
+class GzipOutputBuf : public std::streambuf {
+public:
+    explicit GzipOutputBuf(const std::string& filename, size_t buf_size = 8192);
+    ~GzipOutputBuf() override;
+
+    GzipOutputBuf(const GzipOutputBuf&) = delete;
+    GzipOutputBuf& operator=(const GzipOutputBuf&) = delete;
+
+protected:
+    int overflow(int ch) override;
+    std::streamsize xsputn(const char* s, std::streamsize count) override;
+    int sync() override;
+
+private:
+    gzFile gz_;
+    std::vector<char> buffer_;
+    bool FlushBuffer();
+};
+
+/// ostream that writes to a gzip file.
+class GzipOutputStream : public std::ostream {
+public:
+    explicit GzipOutputStream(const std::string& filename);
+    ~GzipOutputStream() override;
+
+private:
+    GzipOutputBuf buf_;
+};
+
+/// Creates a shared_ptr<ostream> for a gzip file, suitable for maeparser.
+std::shared_ptr<std::ostream> make_gzip_ostream(const std::string& filename);
 
 }  // namespace OEMaestro
 

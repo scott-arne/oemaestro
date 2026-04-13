@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.5.3 LANGUAGES CXX)
+project(oemaestro VERSION 0.5.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,8 +12,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(OEMAESTRO_BUILD_TESTS "Build tests" ON)
 option(OEMAESTRO_BUILD_PYTHON "Build Python bindings" ON)
-option(OEMAESTRO_UNIVERSAL2 "Build universal2 binary for macOS" OFF)
-option(OEMAESTRO_USE_STABLE_ABI "Use Python stable ABI" OFF)
+option(OEMAESTRO_UNIVERSAL2 "Build universal2 binary for macOS" ON)
+option(OEMAESTRO_USE_STABLE_ABI "Use Python stable ABI" ON)
 
 if(APPLE)
     if(OEMAESTRO_UNIVERSAL2)
@@ -38,6 +38,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cmake_openeye)
 list(APPEND CMAKE_MODULE_PATH "${cmake_openeye_SOURCE_DIR}")
 
+set(MAEPARSER_USE_BOOST_IOSTREAMS OFF CACHE BOOL "" FORCE)
+set(MAEPARSER_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(MAEPARSER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
     maeparser
     GIT_REPOSITORY https://github.com/schrodinger/maeparser.git
@@ -45,6 +49,13 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(maeparser)
+
+# maeparser unconditionally includes Boost headers (algorithm, dynamic_bitset,
+# spirit) even when Boost::iostreams is disabled.  Make the header-only Boost
+# include path available to maeparser and any target that includes maeparser
+# headers (e.g. oemaestro).  No Boost libraries are linked.
+find_package(Boost REQUIRED)
+target_include_directories(maeparser PUBLIC ${Boost_INCLUDE_DIRS})
 
 if(OEMAESTRO_BUILD_PYTHON)
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
@@ -82,11 +93,14 @@ target_include_directories(oemaestro
         $<INSTALL_INTERFACE:include>
 )
 
+find_package(ZLIB REQUIRED)
+
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
     PRIVATE
         maeparser
+        ZLIB::ZLIB
 )
 
 # OEBio and OEGrid are optional targets -- in shared-library builds (e.g. from

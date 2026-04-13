@@ -1,6 +1,7 @@
 #ifndef OEMAESTRO_OEMAESTROWRITER_H
 #define OEMAESTRO_OEMAESTROWRITER_H
 
+#include <memory>
 #include <string>
 
 #include <oechem.h>
@@ -71,7 +72,7 @@ public:
 
 private:
     MolConverter converter_;
-    MaestroWriter writer_;
+    std::unique_ptr<MaestroWriter> writer_;
 };
 
 }  // namespace OEMaestro

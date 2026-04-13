@@ -7,6 +7,13 @@
 
 namespace OEMaestro {
 
+namespace {
+bool IsGzipFilename(const std::string& f) {
+    return (f.size() >= 7 && f.substr(f.size() - 7) == ".mae.gz") ||
+           (f.size() >= 6 && f.substr(f.size() - 6) == ".maegz");
+}
+}  // namespace
+
 // --- Default predicates ---
 
 class IsLigandAtom : public OESystem::OEUnaryPredicate<OEChem::OEAtomBase> {
@@ -48,6 +55,7 @@ public:
 using OEAtomPredPtr = std::unique_ptr<OESystem::OEUnaryPredicate<OEChem::OEAtomBase>>;
 
 struct OEMaestroDesignUnitReader::Impl {
+    std::unique_ptr<OEPlatform::oeifstream> owned_ifs_;
     std::unique_ptr<MaestroReader> reader;
     MolConverter converter;
     MaestroMol maestro_buf;
@@ -61,7 +69,12 @@ struct OEMaestroDesignUnitReader::Impl {
           ligand_pred(std::make_unique<IsLigandAtom>()),
           solvent_pred(std::make_unique<IsSolventAtom>()),
           cofactor_pred(std::make_unique<IsCofactorAtom>()) {
-        reader = std::make_unique<MaestroReader>(filename);
+        if (IsGzipFilename(filename)) {
+            reader = std::make_unique<MaestroReader>(make_gzip_istream(filename));
+        } else {
+            owned_ifs_ = std::make_unique<OEPlatform::oeifstream>(filename);
+            reader = std::make_unique<MaestroReader>(make_maeparser_stream(*owned_ifs_));
+        }
     }
 
     Impl(OEPlatform::oeifstream& ifs, OEMaestroReaderConfig config)

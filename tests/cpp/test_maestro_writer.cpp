@@ -122,21 +122,9 @@ TEST_F(MaestroWriterTest, AppendMode) {
     EXPECT_EQ(read_mol.title, "second");
 }
 
-TEST_F(MaestroWriterTest, GzipCompression) {
-    auto path = (tmp_dir_ / "test.mae.gz").string();
-    auto mol = make_simple_maestro_mol();
-
-    {
-        MaestroWriter writer(path);
-        writer.Write(mol);
-        writer.Close();
-    }
-
-    MaestroReader reader(path);
-    MaestroMol read_mol;
-    EXPECT_TRUE(reader.Read(read_mol));
-    EXPECT_EQ(read_mol.title, "test_mol");
-    EXPECT_EQ(read_mol.NumAtoms(), 2u);
+TEST_F(MaestroWriterTest, GzipFilenameThrowsWithoutBoost) {
+    std::string path = (tmp_dir_ / "test.mae.gz").string();
+    EXPECT_THROW(MaestroWriter writer(path), std::runtime_error);
 }
 
 TEST_F(MaestroWriterTest, WriteToClosedThrows) {
