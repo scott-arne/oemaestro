@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.5.5"
-__version_info__ = (0, 5, 5)
+__version__ = "0.5.6"
+__version_info__ = (0, 5, 6)
 
 
 def _default_num_threads():
@@ -172,8 +172,8 @@ def _check_openeye_version():
         from openeye import oechem
         runtime_version = oechem.OEToolkitsGetRelease()
         if runtime_version and build_version:
-            build_parts = build_version.split('.')[:3]
-            runtime_parts = runtime_version.split('.')[:3]
+            build_parts = build_version.split('.')[:2]
+            runtime_parts = runtime_version.split('.')[:2]
             if build_parts != runtime_parts:
                 warnings.warn(
                     f"OpenEye version mismatch: oemaestro was built with OpenEye Toolkits "
