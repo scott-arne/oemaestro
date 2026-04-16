@@ -102,18 +102,21 @@ def _ensure_library_compat():
 
 
 def _preload_shared_libs():
-    """Preload OpenEye shared libraries so _oemaestro can find them.
+    """Preload OpenEye shared libraries so the C extension can find them.
 
-    The wheel links against shared OpenEye libraries from openeye-toolkits,
-    but the RPATH/RUNPATH baked into _oemaestro.so at build time points to
-    the build machine's paths which don't exist at runtime. This function
-    preloads all OpenEye shared libraries with RTLD_GLOBAL so the dynamic
-    linker can resolve them when _oemaestro is imported.
+    On Linux, the extension's RUNPATH (set at build time) normally handles
+    dependency resolution, but preloading ensures libraries are available
+    even if RUNPATH is stripped (e.g. by certain packaging tools).
+    On macOS, @rpath references may not resolve without preloading.
 
-    On Linux, auditwheel excludes OpenEye libraries and RUNPATH may not
-    include the OpenEye library directory. On macOS, @rpath references
-    resolve to build-time paths. Both are fixed by preloading.
+    Only the libraries recorded in ``OPENEYE_EXPECTED_LIBS`` are loaded,
+    and they are loaded with ``RTLD_GLOBAL`` so that cross-module C++
+    symbol references resolve correctly. Loading the entire OpenEye
+    library directory (which can contain 70+ unrelated shared objects)
+    would pollute the global symbol namespace and cause segfaults in
+    unrelated C extensions such as ``_sqlite3``.
     """
+    import ctypes
     import sys
     if sys.platform not in ('linux', 'darwin'):
         return
@@ -126,6 +129,10 @@ def _preload_shared_libs():
     if getattr(_build_info, 'OPENEYE_LIBRARY_TYPE', 'STATIC') != 'SHARED':
         return
 
+    expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    if not expected_libs:
+        return
+
     try:
         from openeye import libs
         oe_lib_dir = libs.FindOpenEyeDLLSDirectory()
@@ -135,26 +142,14 @@ def _preload_shared_libs():
     if not os.path.isdir(oe_lib_dir):
         return
 
-    import ctypes
-
-    # Preload from the OpenEye library directory (handles version-match case)
-    for f in sorted(os.listdir(oe_lib_dir)):
-        is_lib = f.endswith('.dylib') if sys.platform == 'darwin' else (f.endswith('.so') or '.so.' in f)
-        if is_lib:
-            try:
-                ctypes.CDLL(os.path.join(oe_lib_dir, f), mode=ctypes.RTLD_GLOBAL)
-            except OSError:
-                pass
-
-    # Preload compatibility symlinks from package dir (handles version-mismatch
-    # case when _ensure_library_compat() has created symlinks)
     pkg_dir = os.path.dirname(__file__)
-    expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
     for lib_name in expected_libs:
-        symlink = os.path.join(pkg_dir, lib_name)
-        if os.path.islink(symlink):
+        oe_path = os.path.join(oe_lib_dir, lib_name)
+        local_path = os.path.join(pkg_dir, lib_name)
+        path = oe_path if os.path.exists(oe_path) else local_path
+        if os.path.exists(path) or os.path.islink(path):
             try:
-                ctypes.CDLL(symlink, mode=ctypes.RTLD_GLOBAL)
+                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
             except OSError:
                 pass
 
@@ -236,7 +231,7 @@ def _preload_bundled_libs():
             failed = []
             for lib_path in remaining:
                 try:
-                    ctypes.CDLL(lib_path, mode=ctypes.RTLD_GLOBAL)
+                    ctypes.CDLL(lib_path)
                 except OSError:
                     failed.append(lib_path)
             if len(failed) == len(remaining):
