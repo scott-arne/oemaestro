@@ -12,7 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(OEMAESTRO_BUILD_TESTS "Build tests" ON)
 option(OEMAESTRO_BUILD_PYTHON "Build Python bindings" ON)
-option(OEMAESTRO_UNIVERSAL2 "Build universal2 binary for macOS" ON)
+option(OEMAESTRO_UNIVERSAL2 "Build universal2 binary for macOS" OFF)
 option(OEMAESTRO_USE_STABLE_ABI "Use Python stable ABI" ON)
 
 if(APPLE)
