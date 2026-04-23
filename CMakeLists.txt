@@ -67,7 +67,7 @@ if(OEMAESTRO_BUILD_OEIO)
     FetchContent_Declare(
         oeio
         GIT_REPOSITORY https://github.com/scott-arne/oeio.git
-        GIT_TAG origin/feat/entry-point-plugins
+        GIT_TAG feat/entry-point-plugins
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(oeio)
