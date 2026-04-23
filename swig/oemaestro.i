@@ -25,6 +25,15 @@
 
 using namespace OEMaestro;
 
+// Force the linker to include oeio_handler.o from liboemaestro.a
+// so that the OEIO_REGISTER_FORMAT static initializer runs.
+#ifdef OEMAESTRO_HAS_OEIO
+namespace OEMaestro { void oemaestro_force_link_oeio_handler(); }
+static struct _OemaestroOeioForceLink {
+    _OemaestroOeioForceLink() { OEMaestro::oemaestro_force_link_oeio_handler(); }
+} _oemaestro_oeio_force_link;
+#endif
+
 // Typedef so SWIG-generated code can resolve OEChem::OEUnaryAtomPred.
 // OpenEye headers define this as OESystem::OEUnaryPredicate<OEChem::OEAtomBase>
 // but do not provide a short alias in the OEChem namespace.

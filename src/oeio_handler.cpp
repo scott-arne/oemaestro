@@ -103,3 +103,10 @@ public:
 }  // namespace
 
 OEIO_REGISTER_FORMAT(MaestroFormatHandler)
+
+namespace OEMaestro {
+/// Dummy function referenced by the SWIG module to prevent the linker
+/// from stripping oeio_handler.o (and its static OEIO_REGISTER_FORMAT
+/// initializer) from the final shared library.
+void oemaestro_force_link_oeio_handler() {}
+}  // namespace OEMaestro

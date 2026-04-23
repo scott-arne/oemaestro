@@ -610,6 +610,55 @@ def OEWriteMaestro(source, mol, config=None):
     return _CppOEWriteMaestro(source, mol)
 
 
+def _register_oeio_handler():
+    """Register oemaestro as an oeio plugin handler if oeio is available.
+
+    This enables ``oeio.read()`` and ``oeio.write()`` to handle Maestro
+    format files transparently.
+    """
+    try:
+        import oeio
+    except ImportError:
+        return
+
+    if not hasattr(oeio, 'register_handler'):
+        return
+
+    def _maestro_reader(path):
+        """Create an oeio-compatible reader for Maestro files."""
+        return OEMaestroReader(path)
+
+    class _MaestroWriterAdapter:
+        """Adapter to match oeio's writer context-manager protocol."""
+
+        def __init__(self, path):
+            self._writer = OEMaestroWriter(path)
+
+        def add(self, mol):
+            return self._writer.write(mol)
+
+        def close(self):
+            self._writer.close()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+            return False
+
+    oeio.register_handler(
+        name="Maestro",
+        extensions=[".mae", ".mae.gz", ".maegz"],
+        description="Schrodinger Maestro format",
+        reader_factory=_maestro_reader,
+        writer_factory=_MaestroWriterAdapter,
+    )
+
+
+_register_oeio_handler()
+
+
 __all__ = [
     "__version__",
     "__version_info__",
