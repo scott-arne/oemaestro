@@ -22,6 +22,7 @@ add_executable(oemaestro_tests
     test_maestro_writer.cpp
     test_oemaestro_writer.cpp
     test_oe_write_maestro.cpp
+    test_oeio_handler.cpp
 )
 
 target_link_libraries(oemaestro_tests
@@ -30,6 +31,10 @@ target_link_libraries(oemaestro_tests
         GTest::gtest
         maeparser
 )
+
+if(OEMAESTRO_BUILD_OEIO AND TARGET oeio)
+    target_link_libraries(oemaestro_tests PRIVATE oeio)
+endif()
 
 target_compile_definitions(oemaestro_tests PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data"
