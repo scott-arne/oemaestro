@@ -23,10 +23,13 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.10"
-dependencies = ["openeye-toolkits>=2025.2", "rich-click>=1.7"]
+dependencies = ["openeye-toolkits>=2025.2", "rich-click>=1.7", "oeio>=0.1.0"]
 
 [project.scripts]
 oemaestro = "oemaestro.cli:main"
+
+[project.entry-points."oeio.plugins"]
+oemaestro = "oemaestro"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "vrzn>=0.1.0"]
