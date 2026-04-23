@@ -25,15 +25,24 @@ add_executable(oemaestro_tests
     test_oeio_handler.cpp
 )
 
-target_link_libraries(oemaestro_tests
-    PRIVATE
-        oemaestro
-        GTest::gtest
-        maeparser
-)
-
 if(OEMAESTRO_BUILD_OEIO AND TARGET oeio)
-    target_link_libraries(oemaestro_tests PRIVATE oeio)
+    # Force whole-archive linking of oemaestro so that the static
+    # OEIO_REGISTER_FORMAT initializer in oeio_handler.cpp is not stripped
+    # by the linker (it has no externally referenced symbols).
+    target_link_libraries(oemaestro_tests
+        PRIVATE
+            $<LINK_LIBRARY:WHOLE_ARCHIVE,oemaestro>
+            GTest::gtest
+            maeparser
+            oeio
+    )
+else()
+    target_link_libraries(oemaestro_tests
+        PRIVATE
+            oemaestro
+            GTest::gtest
+            maeparser
+    )
 endif()
 
 target_compile_definitions(oemaestro_tests PRIVATE
