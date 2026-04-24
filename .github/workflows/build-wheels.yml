@@ -180,7 +180,7 @@ jobs:
         with:
           name: wheel-linux-${{ matrix.arch }}
           path: dist/*.whl
-          retention-days: 30
+          retention-days: 2
 
   build-macos:
     permissions:
@@ -282,7 +282,7 @@ jobs:
         with:
           name: wheel-macos-arm64
           path: dist/*.whl
-          retention-days: 30
+          retention-days: 2
 
   build-windows:
     permissions:
@@ -407,7 +407,7 @@ jobs:
         with:
           name: wheel-windows-x64
           path: dist/*.whl
-          retention-days: 30
+          retention-days: 2
 
   collect-wheels:
     needs: [build-linux, build-macos, build-windows]
@@ -429,7 +429,7 @@ jobs:
         with:
           name: all-wheels
           path: wheels/*.whl
-          retention-days: 30
+          retention-days: 2
 
   publish:
     needs: collect-wheels
