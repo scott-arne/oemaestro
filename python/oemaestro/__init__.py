@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.5.6"
-__version_info__ = (0, 5, 6)
+__version__ = "0.6.0"
+__version_info__ = (0, 6, 0)
 
 
 def _default_num_threads():
@@ -377,6 +377,18 @@ class OEMaestroReader:
         """Get the current reader configuration."""
         return self._reader.GetConfig()
 
+    def close(self):
+        """Release the underlying C++ reader. Idempotent."""
+        self._reader = None
+        self._pending = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+        return False
+
     def __repr__(self):
         config = self._reader.GetConfig()
         return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
@@ -608,6 +620,55 @@ def OEWriteMaestro(source, mol, config=None):
     if config is not None:
         return _CppOEWriteMaestro(source, mol, config)
     return _CppOEWriteMaestro(source, mol)
+
+
+def _register_oeio_handler():
+    """Register oemaestro as an oeio plugin handler if oeio is available.
+
+    This enables ``oeio.read()`` and ``oeio.write()`` to handle Maestro
+    format files transparently.
+    """
+    try:
+        import oeio
+    except ImportError:
+        return
+
+    if not hasattr(oeio, 'register_handler'):
+        return
+
+    def _maestro_reader(path):
+        """Create an oeio-compatible reader for Maestro files."""
+        return OEMaestroReader(path)
+
+    class _MaestroWriterAdapter:
+        """Adapter to match oeio's writer context-manager protocol."""
+
+        def __init__(self, path):
+            self._writer = OEMaestroWriter(path)
+
+        def append(self, mol):
+            return self._writer.write(mol)
+
+        def close(self):
+            self._writer.close()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+            return False
+
+    oeio.register_handler(
+        name="Maestro",
+        extensions=[".mae", ".mae.gz", ".maegz"],
+        description="Schrodinger Maestro format",
+        reader_factory=_maestro_reader,
+        writer_factory=_MaestroWriterAdapter,
+    )
+
+
+_register_oeio_handler()
 
 
 __all__ = [

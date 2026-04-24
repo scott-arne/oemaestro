@@ -120,6 +120,94 @@ def run_command(cmd, cwd=None, check=True, capture_output=False, verbose=False):
     return result
 
 
+def check_build_backend_available(project_dir, python_exe):
+    """Verify that the build backend required by pyproject.toml is importable.
+
+    Because this script invokes pip with ``--no-build-isolation``, the build
+    backend (e.g. ``scikit-build-core``) must already be installed in the
+    active Python environment. Otherwise pip dies deep in its resolver with
+    a 70-line traceback whose actual cause (``BackendUnavailable``) is
+    easy to miss.
+
+    :param project_dir: Root directory of the project.
+    :param python_exe: Python interpreter that will run the build.
+    :returns: ``True`` if all build requirements import cleanly.
+    """
+    pyproject_path = Path(project_dir) / 'pyproject.toml'
+    if not pyproject_path.exists():
+        return True
+
+    if sys.version_info >= (3, 11):
+        import tomllib
+    else:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+
+    with open(pyproject_path, 'rb') as f:
+        data = tomllib.load(f)
+
+    build_system = data.get('build-system', {})
+    backend = build_system.get('build-backend', '')
+    requires = build_system.get('requires', [])
+    if not backend and not requires:
+        return True
+
+    # Map PyPI distribution names to their import names when they differ.
+    dist_to_import = {
+        'scikit-build-core': 'scikit_build_core',
+        'pybind11': 'pybind11',
+        'scikit-build': 'skbuild',
+    }
+
+    def _import_name(dep):
+        # "pkg>=1.0" → "pkg"; normalize hyphens to underscores for import.
+        name = re.split(r'[<>=!~\s;]', dep, maxsplit=1)[0].strip()
+        return dist_to_import.get(name, name.replace('-', '_'))
+
+    # The backend always needs to import (e.g. scikit_build_core.build).
+    # Plus each item in requires.
+    to_check = set()
+    if backend:
+        to_check.add(backend.split('.')[0])
+    for dep in requires:
+        to_check.add(_import_name(dep))
+
+    check_script = (
+        "import importlib, sys\n"
+        "missing = []\n"
+        f"for m in {sorted(to_check)!r}:\n"
+        "    try: importlib.import_module(m)\n"
+        "    except Exception: missing.append(m)\n"
+        "sys.stdout.write(','.join(missing))\n"
+    )
+    result = subprocess.run(
+        [python_exe, '-c', check_script],
+        capture_output=True, text=True, check=False,
+    )
+    missing = [m for m in result.stdout.strip().split(',') if m]
+    if not missing:
+        return True
+
+    print_error(
+        f"Build backend not available in {python_exe}: "
+        f"cannot import {', '.join(missing)}"
+    )
+    print()
+    print("This script runs pip with --no-build-isolation, so the build")
+    print("backend and its dependencies must already be installed in the")
+    print("active Python environment.")
+    print()
+    print("Fix:")
+    print(f"  pip install {' '.join(requires)}")
+    print()
+    print("Or run the build from an environment that already has these")
+    print("packages installed (e.g. your 'main' env).")
+    return False
+
+
+
 def load_build_config(project_dir):
     """Load [tool.oe-build] configuration from pyproject.toml.
 
@@ -661,6 +749,9 @@ def main():
             return 1
 
     if not verify_openeye_root(args.openeye_root):
+        return 1
+
+    if not check_build_backend_available(project_dir, args.python):
         return 1
 
     wheel = build_wheel(

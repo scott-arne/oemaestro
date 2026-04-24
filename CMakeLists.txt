@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.5.6 LANGUAGES CXX)
+project(oemaestro VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +14,7 @@ option(OEMAESTRO_BUILD_TESTS "Build tests" ON)
 option(OEMAESTRO_BUILD_PYTHON "Build Python bindings" ON)
 option(OEMAESTRO_UNIVERSAL2 "Build universal2 binary for macOS" OFF)
 option(OEMAESTRO_USE_STABLE_ABI "Use Python stable ABI" ON)
+option(OEMAESTRO_BUILD_OEIO "Build oeio format handler plugin" ON)
 
 if(APPLE)
     if(OEMAESTRO_UNIVERSAL2)
@@ -58,6 +59,20 @@ set_target_properties(maeparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Boost REQUIRED)
 target_include_directories(maeparser PUBLIC ${Boost_INCLUDE_DIRS})
 
+if(OEMAESTRO_BUILD_OEIO)
+    set(OEIO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(OEIO_BUILD_PYTHON OFF CACHE BOOL "" FORCE)
+    set(OEIO_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        oeio
+        GIT_REPOSITORY https://github.com/scott-arne/oeio.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(oeio)
+endif()
+
 if(OEMAESTRO_BUILD_PYTHON)
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
     find_package(SWIG 4.0)
@@ -87,6 +102,12 @@ set(OEMAESTRO_SOURCES
 
 add_library(oemaestro ${OEMAESTRO_SOURCES})
 set_target_properties(oemaestro PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+if(OEMAESTRO_BUILD_OEIO AND TARGET oeio)
+    target_sources(oemaestro PRIVATE src/oeio_handler.cpp)
+    target_link_libraries(oemaestro PUBLIC oeio)
+    target_compile_definitions(oemaestro PUBLIC OEMAESTRO_HAS_OEIO)
+endif()
 
 target_include_directories(oemaestro
     PUBLIC

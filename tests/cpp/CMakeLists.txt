@@ -22,14 +22,28 @@ add_executable(oemaestro_tests
     test_maestro_writer.cpp
     test_oemaestro_writer.cpp
     test_oe_write_maestro.cpp
+    test_oeio_handler.cpp
 )
 
-target_link_libraries(oemaestro_tests
-    PRIVATE
-        oemaestro
-        GTest::gtest
-        maeparser
-)
+if(OEMAESTRO_BUILD_OEIO AND TARGET oeio)
+    # Force whole-archive linking of oemaestro so that the static
+    # OEIO_REGISTER_FORMAT initializer in oeio_handler.cpp is not stripped
+    # by the linker (it has no externally referenced symbols).
+    target_link_libraries(oemaestro_tests
+        PRIVATE
+            $<LINK_LIBRARY:WHOLE_ARCHIVE,oemaestro>
+            GTest::gtest
+            maeparser
+            oeio
+    )
+else()
+    target_link_libraries(oemaestro_tests
+        PRIVATE
+            oemaestro
+            GTest::gtest
+            maeparser
+    )
+endif()
 
 target_compile_definitions(oemaestro_tests PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data"
