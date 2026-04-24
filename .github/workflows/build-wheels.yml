@@ -180,7 +180,7 @@ jobs:
         with:
           name: wheel-linux-${{ matrix.arch }}
           path: dist/*.whl
-          retention-days: 30
+          retention-days: 2
 
   build-macos:
     permissions:
@@ -282,10 +282,135 @@ jobs:
         with:
           name: wheel-macos-arm64
           path: dist/*.whl
-          retention-days: 30
+          retention-days: 2
+
+  build-windows:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      # ilammy/msvc-dev-cmd still ships with `using: node20`; opt in to Node.js 24
+      # so the action keeps working past GitHub's June 2 2026 cutover without
+      # waiting on an upstream release.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Setup MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Locate pre-installed Boost
+        run: |
+          # windows-latest images ship Boost under C:\local\boost_<version>.
+          # maeparser uses only header-only components, so no linked libs are needed.
+          BOOST_ROOT=$(ls -d /c/local/boost_* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$BOOST_ROOT" ]; then
+            echo "::error::No pre-installed Boost found under C:\\local\\boost_*"
+            exit 1
+          fi
+          echo "BOOST_ROOT=$BOOST_ROOT" >> $GITHUB_ENV
+          echo "Using BOOST_ROOT=$BOOST_ROOT"
+
+      - name: Install build dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install scikit-build-core ninja cmake build swig pytest
+
+      - name: Validate configuration
+        run: |
+          errors=0
+          if [ -z "${{ vars.OPENEYE_VERSION }}" ]; then
+            echo "::error::GitHub variable OPENEYE_VERSION is not set"
+            errors=1
+          fi
+          if [ -z "${{ vars.SDK_BUCKET }}" ]; then
+            echo "::error::GitHub variable SDK_BUCKET is not set"
+            errors=1
+          fi
+          if [ -z "${{ vars.SDK_WINDOWS }}" ]; then
+            echo "::error::GitHub variable SDK_WINDOWS is not set"
+            errors=1
+          fi
+          if [ "$errors" -ne 0 ]; then
+            echo "::error::Configure required variables in Settings > Variables > Actions"
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        id: gcp-auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Download OpenEye SDK from GCS
+        run: |
+          mkdir -p "${RUNNER_TEMP}/openeye-extract"
+          curl -fsSL \
+            -H "Authorization: Bearer ${{ steps.gcp-auth.outputs.access_token }}" \
+            "https://storage.googleapis.com/${{ vars.SDK_BUCKET }}/${{ vars.SDK_WINDOWS }}" \
+            -o "${RUNNER_TEMP}/sdk.zip"
+          unzip -q "${RUNNER_TEMP}/sdk.zip" -d "${RUNNER_TEMP}/openeye-extract"
+          rm "${RUNNER_TEMP}/sdk.zip"
+          sdk_inner=$(find "${RUNNER_TEMP}/openeye-extract" -maxdepth 1 -mindepth 1 -type d | head -n1)
+          echo "OPENEYE_ROOT=${sdk_inner}" >> $GITHUB_ENV
+          ls "${sdk_inner}"
+
+      - name: Download OpenEye license from GCS
+        run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${{ steps.gcp-auth.outputs.access_token }}" \
+            "https://storage.googleapis.com/${{ vars.SDK_BUCKET }}/oe_license.txt" \
+            -o "${RUNNER_TEMP}/oe_license.txt"
+          echo "OE_LICENSE=${RUNNER_TEMP}/oe_license.txt" >> $GITHUB_ENV
+
+      - name: Install openeye-toolkits Python package
+        run: |
+          pip install "openeye-toolkits==${{ vars.OPENEYE_VERSION }}" \
+            --extra-index-url https://pypi.anaconda.org/openeye/simple \
+            --no-cache-dir
+          echo "--- Verifying openeye-toolkits installation ---"
+          pip show openeye-toolkits
+          python -c "from openeye import oechem; print('OpenEye version:', oechem.OEToolkitsGetRelease())"
+
+      - name: Build wheel
+        run: |
+          python scripts/build_python.py \
+            --openeye-root "${OPENEYE_ROOT}" \
+            --python "$(which python)" \
+            --verbose
+
+      - name: Test wheel
+        run: |
+          pip install dist/oemaestro-*.whl
+          pytest tests/python/ -v -s
+
+      - name: List built artifacts
+        run: |
+          ls -la dist/
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheel-windows-x64
+          path: dist/*.whl
+          retention-days: 2
 
   collect-wheels:
-    needs: [build-linux, build-macos]
+    needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Download all wheel artifacts
@@ -304,7 +429,7 @@ jobs:
         with:
           name: all-wheels
           path: wheels/*.whl
-          retention-days: 30
+          retention-days: 2
 
   publish:
     needs: collect-wheels
