@@ -106,7 +106,7 @@ TEST_F(OeioHandlerTest, WriteAndReadBack) {
         float coords[] = {0.0f, 0.0f, 0.0f, 1.2f, 0.0f, 0.0f};
         mol.SetCoords(coords);
         mol.SetTitle("C=O");
-        writer.add(mol);
+        writer.append(mol);
         writer.close();
     }
 
@@ -128,7 +128,7 @@ TEST_F(OeioHandlerTest, WriteGz) {
         OEChem::OEGraphMol mol;
         mol.NewAtom(6);
         mol.SetTitle("gzip_test");
-        writer.add(mol);
+        writer.append(mol);
         writer.close();
     }
 

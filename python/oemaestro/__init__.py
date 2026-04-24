@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.5.6"
-__version_info__ = (0, 5, 6)
+__version__ = "0.6.0"
+__version_info__ = (0, 6, 0)
 
 
 def _default_num_threads():
@@ -377,6 +377,18 @@ class OEMaestroReader:
         """Get the current reader configuration."""
         return self._reader.GetConfig()
 
+    def close(self):
+        """Release the underlying C++ reader. Idempotent."""
+        self._reader = None
+        self._pending = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+        return False
+
     def __repr__(self):
         config = self._reader.GetConfig()
         return f"OEMaestroReader(tags={config.GetTags()}, perception={config.GetPerception()})"
@@ -634,7 +646,7 @@ def _register_oeio_handler():
         def __init__(self, path):
             self._writer = OEMaestroWriter(path)
 
-        def add(self, mol):
+        def append(self, mol):
             return self._writer.write(mol)
 
         def close(self):

@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.5.6 LANGUAGES CXX)
+project(oemaestro VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,7 +67,7 @@ if(OEMAESTRO_BUILD_OEIO)
     FetchContent_Declare(
         oeio
         GIT_REPOSITORY https://github.com/scott-arne/oeio.git
-        GIT_TAG feat/entry-point-plugins
+        GIT_TAG master
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(oeio)

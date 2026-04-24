@@ -80,7 +80,7 @@ class TestWriteViaMaestro:
         out_path = str(tmp_path / "output.mae")
         with oeio.write(out_path) as writer:
             for mol in oeio.read(f"{DATA_DIR}/simple.mae"):
-                writer.add(mol)
+                writer.append(mol)
 
         mols = list(oeio.read(out_path))
         assert len(mols) == 1
@@ -93,7 +93,7 @@ class TestWriteViaMaestro:
         out_path = str(tmp_path / "output.mae.gz")
         with oeio.write(out_path) as writer:
             for mol in oeio.read(f"{DATA_DIR}/simple.mae"):
-                writer.add(mol)
+                writer.append(mol)
 
         mols = list(oeio.read(out_path))
         assert len(mols) == 1
