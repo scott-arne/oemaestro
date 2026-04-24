@@ -430,7 +430,7 @@ OE_CROSS_RUNTIME_REF_TYPEMAPS(OEDocking::OEReceptor, _oemaestro_is_oereceptor, "
 // Version macros
 // ============================================================================
 #define OEMAESTRO_VERSION_MAJOR 0
-#define OEMAESTRO_VERSION_MINOR 6
+#define OEMAESTRO_VERSION_MINOR 7
 #define OEMAESTRO_VERSION_PATCH 0
 
 // ============================================================================
