@@ -311,17 +311,25 @@ jobs:
         with:
           arch: x64
 
-      - name: Locate pre-installed Boost
+      - name: Download Boost headers
+        shell: bash
         run: |
-          # windows-latest images ship Boost under C:\local\boost_<version>.
-          # maeparser uses only header-only components, so no linked libs are needed.
-          BOOST_ROOT=$(ls -d /c/local/boost_* 2>/dev/null | sort -V | tail -1)
-          if [ -z "$BOOST_ROOT" ]; then
-            echo "::error::No pre-installed Boost found under C:\\local\\boost_*"
-            exit 1
-          fi
-          echo "BOOST_ROOT=$BOOST_ROOT" >> $GITHUB_ENV
-          echo "Using BOOST_ROOT=$BOOST_ROOT"
+          # windows-latest (windows-2025) no longer ships Boost under
+          # C:\local\boost_<version>. maeparser uses only header-only
+          # components, so download just the source archive and point
+          # BOOST_ROOT at the extracted tree.
+          BOOST_VERSION=1.86.0
+          BOOST_UNDER=${BOOST_VERSION//./_}
+          ARCHIVE="${RUNNER_TEMP}/boost.7z"
+          EXTRACT="${RUNNER_TEMP}/boost-src"
+          curl -fsSL \
+            "https://archives.boost.io/release/${BOOST_VERSION}/source/boost_${BOOST_UNDER}.7z" \
+            -o "${ARCHIVE}"
+          mkdir -p "${EXTRACT}"
+          7z x -y "-o${EXTRACT}" "${ARCHIVE}" > /dev/null
+          BOOST_ROOT="${EXTRACT}/boost_${BOOST_UNDER}"
+          echo "BOOST_ROOT=${BOOST_ROOT}" >> $GITHUB_ENV
+          echo "Using BOOST_ROOT=${BOOST_ROOT}"
 
       - name: Install build dependencies
         run: |

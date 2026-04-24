@@ -259,14 +259,22 @@ def get_openeye_info(python_exe):
     :param python_exe: Path to the Python executable.
     :returns: Dict with VERSION, LIB_DIR, and PLATFORM keys, or None on failure.
     """
+    # FindOpenEyeDLLSDirectory() raises on Windows because the wheel flattens
+    # DLLs into openeye/libs/ with no platform subdirectory. Fall back to the
+    # package directory itself, which is what the .pyd modules load from.
     code = """
+import os, sys
 from openeye import libs, oechem
-import os
-dll_dir = libs.FindOpenEyeDLLSDirectory()
+if sys.platform.startswith('win'):
+    dll_dir = os.path.dirname(libs.__file__)
+    platform_name = 'win-x64'
+else:
+    dll_dir = libs.FindOpenEyeDLLSDirectory()
+    platform_name = os.path.basename(dll_dir)
 version = oechem.OEToolkitsGetRelease()
 print(f'VERSION:{version}')
 print(f'LIB_DIR:{dll_dir}')
-print(f'PLATFORM:{os.path.basename(dll_dir)}')
+print(f'PLATFORM:{platform_name}')
 """
     try:
         result = run_command(
@@ -403,6 +411,10 @@ def build_wheel(project_dir, python_exe, openeye_root, openeye_info, config,
 
     # Build the wheel
     print_step("Building wheel with pip...")
+    # Windows uses static linking: the OpenEye C++ SDK ships only static .lib
+    # files, and SWIG cross-runtime pointers still interop with openeye.oechem
+    # at runtime because the toolkit versions match.
+    use_shared = 'OFF' if platform.system() == 'Windows' else 'ON'
     cmd = [
         python_exe, '-m', 'pip', 'wheel', '.',
         '--no-build-isolation',
@@ -411,10 +423,21 @@ def build_wheel(project_dir, python_exe, openeye_root, openeye_info, config,
         '-C', f'cmake.define.OPENEYE_ROOT={openeye_root}',
         '-C', f'cmake.define.OPENEYE_LIB_DIR={openeye_lib_dir}',
         '-C', f'cmake.define.OPENEYE_TOOLKITS_VERSION={openeye_version}',
-        '-C', 'cmake.define.OPENEYE_USE_SHARED=ON',
+        '-C', f'cmake.define.OPENEYE_USE_SHARED={use_shared}',
         '-C', f'cmake.define.{config["cmake-test-flag"]}=OFF',
         '-C', 'logging.level=INFO',
     ]
+
+    # SWIG is pip-installable but lands in <env>/Scripts on Windows, which
+    # isn't on PATH inside conda envs. Point CMake at it explicitly if found.
+    py_dir = Path(python_exe).parent
+    swig_candidates = [
+        py_dir / 'Scripts' / 'swig.exe',  # Windows
+        py_dir / 'swig',                  # Linux/macOS (bin dir)
+    ]
+    swig_exe = next((p for p in swig_candidates if p.exists()), None)
+    if swig_exe:
+        cmd.extend(['-C', f'cmake.define.SWIG_EXECUTABLE={swig_exe.as_posix()}'])
 
     # Add any extra CMake defines from config
     for key, value in config.get('extra-cmake-defines', {}).items():
