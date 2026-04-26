@@ -331,6 +331,23 @@ jobs:
           echo "BOOST_ROOT=${BOOST_ROOT}" >> $GITHUB_ENV
           echo "Using BOOST_ROOT=${BOOST_ROOT}"
 
+      - name: Install zlib via vcpkg
+        shell: bash
+        run: |
+          # oemaestro's public StreamAdapter.h includes <zlib.h> and
+          # StreamAdapter.cpp calls gzopen/gzread, so zlib headers and a
+          # link library must be present at build time. windows-latest
+          # runners ship vcpkg at VCPKG_INSTALLATION_ROOT.
+          #
+          # Use the x64-windows-static-md triplet: zlib itself is linked
+          # statically into _oemaestro.pyd (no zlib1.dll to redistribute),
+          # while the C runtime stays dynamic (/MD) to match MSVC defaults
+          # and Python's ABI expectations.
+          "${VCPKG_INSTALLATION_ROOT}/vcpkg.exe" install zlib:x64-windows-static-md
+          ZLIB_ROOT="${VCPKG_INSTALLATION_ROOT}/installed/x64-windows-static-md"
+          echo "ZLIB_ROOT=${ZLIB_ROOT}" >> $GITHUB_ENV
+          echo "Using ZLIB_ROOT=${ZLIB_ROOT}"
+
       - name: Install build dependencies
         run: |
           pip install --upgrade pip setuptools wheel
