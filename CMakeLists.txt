@@ -120,9 +120,9 @@ find_package(ZLIB REQUIRED)
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
+        ZLIB::ZLIB
     PRIVATE
         maeparser
-        ZLIB::ZLIB
 )
 
 # OEBio and OEGrid are optional targets -- in shared-library builds (e.g. from
