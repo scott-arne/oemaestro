@@ -411,19 +411,15 @@ def build_wheel(project_dir, python_exe, openeye_root, openeye_info, config,
 
     # Build the wheel
     print_step("Building wheel with pip...")
-    # Windows uses static linking: the OpenEye C++ SDK ships only static .lib
-    # files, and SWIG cross-runtime pointers still interop with openeye.oechem
-    # at runtime because the toolkit versions match.
-    use_shared = 'OFF' if platform.system() == 'Windows' else 'ON'
     cmd = [
         python_exe, '-m', 'pip', 'wheel', '.',
         '--no-build-isolation',
         '--no-deps',
         '--wheel-dir', 'dist',
         '-C', f'cmake.define.OPENEYE_ROOT={openeye_root}',
-        '-C', f'cmake.define.OPENEYE_LIB_DIR={openeye_lib_dir}',
+        '-C', f'cmake.define.OPENEYE_RUNTIME_LIB_DIR={openeye_lib_dir}',
         '-C', f'cmake.define.OPENEYE_TOOLKITS_VERSION={openeye_version}',
-        '-C', f'cmake.define.OPENEYE_USE_SHARED={use_shared}',
+        '-C', f'cmake.define.OPENEYE_USE_SHARED=ON',
         '-C', f'cmake.define.{config["cmake-test-flag"]}=OFF',
         '-C', 'logging.level=INFO',
     ]
