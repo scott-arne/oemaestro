@@ -401,6 +401,34 @@ jobs:
             --python "$(which python)" \
             --verbose
 
+      - name: Validate abi3 import table
+        run: |
+          # The wheel advertises cp310-abi3-win_amd64; the compiled .pyd must
+          # link python3.dll (stable ABI) and must NOT link python3XX.dll
+          # (versioned), otherwise the wheel silently breaks on any Python
+          # minor other than the build Python. See cmake-openeye bug report
+          # 2026-04-27-windows-stable-abi-wrong-python-dll.md
+          WHEEL=$(ls dist/oemaestro-*.whl)
+          TMPDIR=$(mktemp -d)
+          unzip -q "$WHEEL" -d "$TMPDIR"
+          PYD=$(find "$TMPDIR" -name '_oemaestro*.pyd' | head -1)
+          if [ -z "$PYD" ]; then
+            echo "::error::_oemaestro*.pyd not found in wheel"
+            exit 1
+          fi
+          dumpbin //dependents "$PYD" > deps.txt
+          cat deps.txt
+          if grep -Eiq '\bpython3[0-9]+\.dll\b' deps.txt; then
+            echo "::error::abi3 wheel links versioned Python DLL (python3XX.dll)"
+            grep -Ei '\bpython3[0-9]+\.dll\b' deps.txt
+            exit 1
+          fi
+          if ! grep -iq '\bpython3\.dll\b' deps.txt; then
+            echo "::error::abi3 wheel does not link python3.dll"
+            exit 1
+          fi
+          echo "OK: extension links python3.dll only"
+
       - name: Test wheel
         run: |
           pip install dist/oemaestro-*.whl
@@ -409,6 +437,22 @@ jobs:
       - name: List built artifacts
         run: |
           ls -la dist/
+
+      - name: Setup Python 3.13 (abi3 cross-version smoke test)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: abi3 smoke test under Python 3.13
+        run: |
+          # Install the wheel into a different Python minor than the build
+          # Python (3.11) to verify the stable-ABI contract actually holds.
+          python -m pip install --upgrade pip
+          pip install dist/oemaestro-*.whl
+          pip install "openeye-toolkits==${{ vars.OPENEYE_VERSION }}" \
+            --extra-index-url https://pypi.anaconda.org/openeye/simple \
+            --no-cache-dir
+          python -c "import oemaestro; print('oemaestro', oemaestro.__version__, 'loaded under Python', __import__('sys').version)"
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v7
