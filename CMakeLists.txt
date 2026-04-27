@@ -126,10 +126,17 @@ target_include_directories(oemaestro
 
 find_package(ZLIB REQUIRED)
 
+# ZLIB::ZLIB is wrapped in BUILD_INTERFACE because on Windows cmake-openeye
+# aliases it onto the FetchContent-built `zlibstatic` target, which is not
+# in any install export set. install(EXPORT oemaestro-targets) would fail
+# at configure time ("requires target zlibstatic that is not in any export
+# set"). In-tree consumers (the SWIG wrapper) still see ZLIB::ZLIB via
+# the build-tree interface; downstream CMake consumers of the installed
+# oemaestro-targets must call find_package(ZLIB) themselves.
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
-        ZLIB::ZLIB
+        $<BUILD_INTERFACE:ZLIB::ZLIB>
     PRIVATE
         maeparser
 )
