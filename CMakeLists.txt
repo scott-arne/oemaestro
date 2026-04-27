@@ -33,7 +33,7 @@ include(FetchContent)
 FetchContent_Declare(
     cmake_openeye
     GIT_REPOSITORY https://github.com/scott-arne/cmake-openeye.git
-    GIT_TAG v1.1.3
+    GIT_TAG v1.1.4
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(cmake_openeye)
@@ -51,6 +51,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(maeparser)
 set_target_properties(maeparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# maeparser v1.3.2's CMakeLists.txt applies STATIC_MAEPARSER as PRIVATE when
+# building statically, so the macro is only visible inside maeparser's own
+# translation units. On Windows, consumers that #include maeparser headers
+# without STATIC_MAEPARSER hit the __declspec(dllimport) branch in
+# MaeParserConfig.hpp and the linker emits unresolved __imp_* externs.
+# Upgrade to PUBLIC so the define propagates to every target that links
+# maeparser (oemaestro, _oemaestro.pyd, ...).
+target_compile_definitions(maeparser PUBLIC STATIC_MAEPARSER)
 
 # maeparser unconditionally includes Boost headers (algorithm, dynamic_bitset,
 # spirit) even when Boost::iostreams is disabled.  Make the header-only Boost
