@@ -448,10 +448,10 @@ jobs:
           # Install the wheel into a different Python minor than the build
           # Python (3.11) to verify the stable-ABI contract actually holds.
           python -m pip install --upgrade pip
-          pip install dist/oemaestro-*.whl
           pip install "openeye-toolkits==${{ vars.OPENEYE_VERSION }}" \
             --extra-index-url https://pypi.anaconda.org/openeye/simple \
             --no-cache-dir
+          pip install dist/oemaestro-*.whl
           python -c "import oemaestro; print('oemaestro', oemaestro.__version__, 'loaded under Python', __import__('sys').version)"
 
       - name: Upload wheel artifact
