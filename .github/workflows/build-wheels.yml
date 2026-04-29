@@ -311,22 +311,30 @@ jobs:
         with:
           arch: x64
 
-      - name: Locate pre-installed Boost
+      - name: Download Boost headers
+        shell: bash
         run: |
-          # windows-latest images ship Boost under C:\local\boost_<version>.
-          # maeparser uses only header-only components, so no linked libs are needed.
-          BOOST_ROOT=$(ls -d /c/local/boost_* 2>/dev/null | sort -V | tail -1)
-          if [ -z "$BOOST_ROOT" ]; then
-            echo "::error::No pre-installed Boost found under C:\\local\\boost_*"
-            exit 1
-          fi
-          echo "BOOST_ROOT=$BOOST_ROOT" >> $GITHUB_ENV
-          echo "Using BOOST_ROOT=$BOOST_ROOT"
+          # windows-latest (windows-2025) no longer ships Boost under
+          # C:\local\boost_<version>. maeparser uses only header-only
+          # components, so download just the source archive and point
+          # BOOST_ROOT at the extracted tree.
+          BOOST_VERSION=1.86.0
+          BOOST_UNDER=${BOOST_VERSION//./_}
+          ARCHIVE="${RUNNER_TEMP}/boost.7z"
+          EXTRACT="${RUNNER_TEMP}/boost-src"
+          curl -fsSL \
+            "https://archives.boost.io/release/${BOOST_VERSION}/source/boost_${BOOST_UNDER}.7z" \
+            -o "${ARCHIVE}"
+          mkdir -p "${EXTRACT}"
+          7z x -y "-o${EXTRACT}" "${ARCHIVE}" > /dev/null
+          BOOST_ROOT="${EXTRACT}/boost_${BOOST_UNDER}"
+          echo "BOOST_ROOT=${BOOST_ROOT}" >> $GITHUB_ENV
+          echo "Using BOOST_ROOT=${BOOST_ROOT}"
 
       - name: Install build dependencies
         run: |
-          pip install --upgrade pip setuptools wheel
-          pip install scikit-build-core ninja cmake build swig pytest
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install scikit-build-core ninja cmake build swig pytest
 
       - name: Validate configuration
         run: |
@@ -393,6 +401,34 @@ jobs:
             --python "$(which python)" \
             --verbose
 
+      - name: Validate abi3 import table
+        run: |
+          # The wheel advertises cp310-abi3-win_amd64; the compiled .pyd must
+          # link python3.dll (stable ABI) and must NOT link python3XX.dll
+          # (versioned), otherwise the wheel silently breaks on any Python
+          # minor other than the build Python. See cmake-openeye bug report
+          # 2026-04-27-windows-stable-abi-wrong-python-dll.md
+          WHEEL=$(ls dist/oemaestro-*.whl)
+          TMPDIR=$(mktemp -d)
+          unzip -q "$WHEEL" -d "$TMPDIR"
+          PYD=$(find "$TMPDIR" -name '_oemaestro*.pyd' | head -1)
+          if [ -z "$PYD" ]; then
+            echo "::error::_oemaestro*.pyd not found in wheel"
+            exit 1
+          fi
+          dumpbin //dependents "$PYD" > deps.txt
+          cat deps.txt
+          if grep -Eiq '\bpython3[0-9]+\.dll\b' deps.txt; then
+            echo "::error::abi3 wheel links versioned Python DLL (python3XX.dll)"
+            grep -Ei '\bpython3[0-9]+\.dll\b' deps.txt
+            exit 1
+          fi
+          if ! grep -iq '\bpython3\.dll\b' deps.txt; then
+            echo "::error::abi3 wheel does not link python3.dll"
+            exit 1
+          fi
+          echo "OK: extension links python3.dll only"
+
       - name: Test wheel
         run: |
           pip install dist/oemaestro-*.whl
@@ -401,6 +437,22 @@ jobs:
       - name: List built artifacts
         run: |
           ls -la dist/
+
+      - name: Setup Python 3.13 (abi3 cross-version smoke test)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: abi3 smoke test under Python 3.13
+        run: |
+          # Install the wheel into a different Python minor than the build
+          # Python (3.11) to verify the stable-ABI contract actually holds.
+          python -m pip install --upgrade pip
+          pip install "openeye-toolkits==${{ vars.OPENEYE_VERSION }}" \
+            --extra-index-url https://pypi.anaconda.org/openeye/simple \
+            --no-cache-dir
+          pip install dist/oemaestro-*.whl
+          python -c "import oemaestro; print('oemaestro', oemaestro.__version__, 'loaded under Python', __import__('sys').version)"
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v7

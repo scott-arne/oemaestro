@@ -33,7 +33,7 @@ include(FetchContent)
 FetchContent_Declare(
     cmake_openeye
     GIT_REPOSITORY https://github.com/scott-arne/cmake-openeye.git
-    GIT_TAG v1.0.2
+    GIT_TAG v1.1.6
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(cmake_openeye)
@@ -51,6 +51,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(maeparser)
 set_target_properties(maeparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# maeparser v1.3.2's CMakeLists.txt applies STATIC_MAEPARSER as PRIVATE when
+# building statically, so the macro is only visible inside maeparser's own
+# translation units. On Windows, consumers that #include maeparser headers
+# without STATIC_MAEPARSER hit the __declspec(dllimport) branch in
+# MaeParserConfig.hpp and the linker emits unresolved __imp_* externs.
+# Upgrade to PUBLIC so the define propagates to every target that links
+# maeparser (oemaestro, _oemaestro.pyd, ...).
+target_compile_definitions(maeparser PUBLIC STATIC_MAEPARSER)
 
 # maeparser unconditionally includes Boost headers (algorithm, dynamic_bitset,
 # spirit) even when Boost::iostreams is disabled.  Make the header-only Boost
@@ -117,12 +126,19 @@ target_include_directories(oemaestro
 
 find_package(ZLIB REQUIRED)
 
+# ZLIB::ZLIB is wrapped in BUILD_INTERFACE because on Windows cmake-openeye
+# aliases it onto the FetchContent-built `zlibstatic` target, which is not
+# in any install export set. install(EXPORT oemaestro-targets) would fail
+# at configure time ("requires target zlibstatic that is not in any export
+# set"). In-tree consumers (the SWIG wrapper) still see ZLIB::ZLIB via
+# the build-tree interface; downstream CMake consumers of the installed
+# oemaestro-targets must call find_package(ZLIB) themselves.
 target_link_libraries(oemaestro
     PUBLIC
         OpenEye::OEChem
+        $<BUILD_INTERFACE:ZLIB::ZLIB>
     PRIVATE
         maeparser
-        ZLIB::ZLIB
 )
 
 # OEBio and OEGrid are optional targets -- in shared-library builds (e.g. from
