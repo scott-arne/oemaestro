@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 
-__version__ = "0.7.0"
-__version_info__ = (0, 7, 0)
+__version__ = "0.7.1"
+__version_info__ = (0, 7, 1)
 
 
 def _default_num_threads():
