@@ -20,8 +20,54 @@ import os
 import re
 import warnings
 
-__version__ = "0.7.1"
-__version_info__ = (0, 7, 1)
+__version__ = "0.7.2"
+__version_info__ = (0, 7, 2)
+
+
+def _find_openeye_runtime_lib_dir(expected_libs=()):
+    """Find the OpenEye runtime library directory without importing oechem."""
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    search_locations = []
+    openeye_module = sys.modules.get("openeye")
+    openeye_path = getattr(openeye_module, "__path__", None)
+    if openeye_path is not None:
+        search_locations.extend(openeye_path)
+
+    if not search_locations:
+        try:
+            openeye_spec = importlib.util.find_spec("openeye")
+        except (ImportError, ValueError):
+            openeye_spec = None
+        if (
+            openeye_spec is not None
+            and openeye_spec.submodule_search_locations is not None
+        ):
+            search_locations.extend(openeye_spec.submodule_search_locations)
+
+    expected_libs = set(expected_libs or ())
+    fallback_dir = None
+    for package_root in search_locations:
+        libs_root = Path(package_root) / "libs"
+        if not libs_root.is_dir():
+            continue
+
+        # Importing openeye.libs eagerly imports oechem in some environments.
+        # The runtime libraries are shipped below openeye/libs, so filesystem
+        # discovery preserves the fresh-import condition.
+        for root, _, files in os.walk(libs_root):
+            file_set = set(files)
+            if expected_libs and expected_libs.intersection(file_set):
+                return root
+            if fallback_dir is None and any(
+                ".dylib" in lib_name or ".so" in lib_name or ".dll" in lib_name
+                for lib_name in files
+            ):
+                fallback_dir = root
+
+    return fallback_dir
 
 
 def _default_num_threads():
@@ -53,10 +99,8 @@ def _ensure_library_compat():
     if not expected_libs:
         return False
 
-    try:
-        from openeye import libs
-        oe_lib_dir = libs.FindOpenEyeDLLSDirectory()
-    except (ImportError, Exception):
+    oe_lib_dir = _find_openeye_runtime_lib_dir(expected_libs)
+    if oe_lib_dir is None:
         return False
 
     if not os.path.isdir(oe_lib_dir):
@@ -133,10 +177,8 @@ def _preload_shared_libs():
     if not expected_libs:
         return
 
-    try:
-        from openeye import libs
-        oe_lib_dir = libs.FindOpenEyeDLLSDirectory()
-    except (ImportError, Exception):
+    oe_lib_dir = _find_openeye_runtime_lib_dir(expected_libs)
+    if oe_lib_dir is None:
         return
 
     if not os.path.isdir(oe_lib_dir):
@@ -169,24 +211,25 @@ def _check_openeye_version():
         return
 
     try:
-        from openeye import oechem
-        runtime_version = oechem.OEToolkitsGetRelease()
-        if runtime_version and build_version:
-            build_parts = build_version.split('.')[:2]
-            runtime_parts = runtime_version.split('.')[:2]
-            if build_parts != runtime_parts:
-                warnings.warn(
-                    f"OpenEye version mismatch: oemaestro was built with OpenEye Toolkits "
-                    f"{build_version} but runtime has OpenEye Toolkits {runtime_version}. "
-                    f"This may cause compatibility issues.",
-                    RuntimeWarning
-                )
-    except ImportError:
+        from importlib import metadata
+        runtime_version = metadata.version("openeye-toolkits")
+    except metadata.PackageNotFoundError:
         warnings.warn(
             "openeye-toolkits package not found. "
             "This wheel requires openeye-toolkits to be installed. "
             "Install with: pip install openeye-toolkits",
             ImportWarning
+        )
+        return
+
+    build_parts = build_version.split('.')[:2]
+    runtime_parts = runtime_version.split('.')[:2]
+    if build_parts != runtime_parts:
+        warnings.warn(
+            f"OpenEye version mismatch: oemaestro was built with OpenEye Toolkits "
+            f"{build_version} but runtime has OpenEye Toolkits {runtime_version}. "
+            f"This may cause compatibility issues.",
+            RuntimeWarning
         )
 
 
@@ -243,11 +286,6 @@ _preload_bundled_libs()
 
 # Check OpenEye version on import
 _check_openeye_version()
-
-# Import openeye.libs before loading the SWIG extension so that on Windows its
-# os.add_dll_directory() side effect populates the DLL search path; harmless on
-# POSIX where openeye-toolkits is already a runtime dependency.
-import openeye.libs  # noqa: F401,E402
 
 # Import SWIG-generated bindings
 from .oemaestro import (
