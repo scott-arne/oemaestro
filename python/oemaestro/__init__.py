@@ -27,8 +27,8 @@ import warnings
 from importlib import metadata
 from pathlib import Path
 
-__version__ = "0.7.3"
-__version_info__ = (0, 7, 3)
+__version__ = "0.7.4"
+__version_info__ = (0, 7, 4)
 
 
 _OPENEYE_COMPAT_PRELOAD_PATHS: list[str] = []
@@ -73,6 +73,11 @@ def _runtime_shared_library_names(lib_names):
         or lib_name.endswith(".dylib")
         or lib_name.endswith(".dll")
     ]
+
+
+def _is_openeye_runtime_library_name(lib_name):
+    """Return whether a dependency belongs to the OpenEye runtime set."""
+    return lib_name.startswith("liboe") or lib_name.startswith("libzstd.")
 
 
 def _find_openeye_runtime_lib_dir(expected_libs=()):
@@ -157,6 +162,64 @@ def _compatible_library_path(oe_lib_dir, expected_name):
     return candidates[0], True
 
 
+def _extension_runtime_library_names(pkg_dir):
+    """Return OpenEye runtime library names recorded by the extension."""
+    extension_path = _find_extension_module_path(pkg_dir)
+    if extension_path is None:
+        return []
+
+    if sys.platform == "darwin":
+        return _mach_o_runtime_library_names(extension_path)
+    if sys.platform.startswith("linux"):
+        return _elf_runtime_library_names(extension_path)
+    return []
+
+
+def _mach_o_runtime_library_names(extension_path):
+    """Return OpenEye dylib dependencies recorded in a Mach-O extension."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["otool", "-L", str(extension_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError, subprocess.CalledProcessError):
+        return []
+
+    dependencies = []
+    for line in result.stdout.splitlines()[1:]:
+        dependency = line.strip().split(" ", 1)[0]
+        lib_name = os.path.basename(dependency)
+        if _is_openeye_runtime_library_name(lib_name):
+            dependencies.append(lib_name)
+    return dependencies
+
+
+def _elf_runtime_library_names(extension_path):
+    """Return OpenEye shared-library dependencies recorded in an ELF extension."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["readelf", "-d", str(extension_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError, subprocess.CalledProcessError):
+        return []
+
+    dependencies = []
+    for match in re.finditer(r"Shared library: \[(?P<name>[^\]]+)\]", result.stdout):
+        lib_name = match.group("name")
+        if _is_openeye_runtime_library_name(lib_name):
+            dependencies.append(lib_name)
+    return dependencies
+
+
 def _ensure_cache_alias(cache_dir, expected_name, target_path):
     """Create or refresh an expected-name symlink in the user cache."""
     alias_path = cache_dir / expected_name
@@ -212,9 +275,11 @@ def _ensure_library_compat():
     if getattr(_build_info, 'OPENEYE_LIBRARY_TYPE', 'STATIC') != 'SHARED':
         return False
 
-    expected_libs = _runtime_shared_library_names(
+    expected_libs = set(_runtime_shared_library_names(
         getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
-    )
+    ))
+    expected_libs.update(_extension_runtime_library_names(os.path.dirname(__file__)))
+    expected_libs = sorted(expected_libs)
     if not expected_libs:
         return False
 
@@ -484,6 +549,9 @@ def _preload_bundled_libs():
 
 _preload_bundled_libs()
 
+# Load the extension from the alias cache when $ORIGIN must see cached aliases
+_load_cached_extension_if_needed()
+
 # Check OpenEye version on import
 _check_openeye_version()
 
@@ -542,7 +610,7 @@ class OEMaestroReader:
     """
 
     def __init__(self, source, config=None, num_threads=None):
-        from openeye import oechem
+        from openeye import oechem  # type: ignore[import-untyped]
         self._oechem = oechem
         if num_threads is not None:
             if config is None:
@@ -872,7 +940,7 @@ def _register_oeio_handler():
     format files transparently.
     """
     try:
-        import oeio
+        import oeio  # type: ignore[import-untyped]
     except ImportError:
         return
 
