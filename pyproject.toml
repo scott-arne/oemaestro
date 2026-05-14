@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oemaestro"
-version = "0.7.2"
+version = "0.7.3"
 description = "Native Maestro format parser for OpenEye Toolkits"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -76,3 +76,6 @@ expected-missing-libs = [
 
 # Additional CMake defines passed during wheel build (beyond the standard ones)
 [tool.oe-build.extra-cmake-defines]
+
+[tool.ruff.lint.per-file-ignores]
+"python/oemaestro/__init__.py" = ["E402"]

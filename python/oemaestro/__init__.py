@@ -16,20 +16,67 @@ Example usage::
     mol = oechem.OEGraphMol()
     OEReadMaestro("input.mae", mol)
 """
+import hashlib
+import importlib.machinery
+import importlib.util
 import os
 import re
+import shutil
+import sys
 import warnings
+from importlib import metadata
+from pathlib import Path
 
-__version__ = "0.7.2"
-__version_info__ = (0, 7, 2)
+__version__ = "0.7.3"
+__version_info__ = (0, 7, 3)
+
+
+_OPENEYE_COMPAT_PRELOAD_PATHS: list[str] = []
+_OPENEYE_COMPAT_EXTENSION_DIR: Path | None = None
+
+
+def _user_cache_root():
+    """Return the per-user cache root for OpenEye compatibility aliases."""
+    cache_home = os.environ.get("XDG_CACHE_HOME")
+    if cache_home:
+        return Path(cache_home) / "oemaestro"
+    return Path.home() / ".cache" / "oemaestro"
+
+
+def _runtime_openeye_version():
+    """Return the installed OpenEye toolkit distribution version if available."""
+    try:
+        return metadata.version("openeye-toolkits")
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def _cache_key(oe_lib_dir, expected_libs, build_version, runtime_version):
+    """Build a stable cache key for one OpenEye runtime library set."""
+    key_data = "\n".join(
+        [
+            os.path.realpath(oe_lib_dir),
+            build_version or "unknown",
+            runtime_version or "unknown",
+            *sorted(expected_libs),
+        ]
+    )
+    return hashlib.sha256(key_data.encode("utf-8")).hexdigest()[:16]
+
+
+def _runtime_shared_library_names(lib_names):
+    """Return filenames that can participate in runtime dynamic loading."""
+    return [
+        lib_name
+        for lib_name in lib_names
+        if ".so" in lib_name
+        or lib_name.endswith(".dylib")
+        or lib_name.endswith(".dll")
+    ]
 
 
 def _find_openeye_runtime_lib_dir(expected_libs=()):
     """Find the OpenEye runtime library directory without importing oechem."""
-    import importlib.util
-    import sys
-    from pathlib import Path
-
     search_locations = []
     openeye_module = sys.modules.get("openeye")
     openeye_path = getattr(openeye_module, "__path__", None)
@@ -47,7 +94,7 @@ def _find_openeye_runtime_lib_dir(expected_libs=()):
         ):
             search_locations.extend(openeye_spec.submodule_search_locations)
 
-    expected_libs = set(expected_libs or ())
+    expected_libs = set(_runtime_shared_library_names(expected_libs or ()))
     fallback_dir = None
     for package_root in search_locations:
         libs_root = Path(package_root) / "libs"
@@ -70,23 +117,93 @@ def _find_openeye_runtime_lib_dir(expected_libs=()):
     return fallback_dir
 
 
+def _library_family(lib_name):
+    """Return the stable library family name for a versioned shared library."""
+    match = re.match(r"(lib\w+?)(-[\d.]+)?(\.[\d.]*\w+)$", lib_name)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _candidate_runtime_libraries(oe_lib_dir, expected_name):
+    """Find runtime libraries with the same family as an expected filename."""
+    family = _library_family(expected_name)
+    if family is None:
+        return []
+    candidates = []
+    for file_name in os.listdir(oe_lib_dir):
+        candidate_path = os.path.join(oe_lib_dir, file_name)
+        if not os.path.isfile(candidate_path):
+            continue
+        if file_name.startswith(f"{family}-") or file_name.startswith(f"{family}."):
+            candidates.append(candidate_path)
+    return sorted(candidates)
+
+
+def _compatible_library_path(oe_lib_dir, expected_name):
+    """Return a runtime library path and whether it needs an expected-name alias."""
+    exact_path = os.path.join(oe_lib_dir, expected_name)
+    if os.path.isfile(exact_path):
+        return exact_path, False
+
+    candidates = _candidate_runtime_libraries(oe_lib_dir, expected_name)
+    if len(candidates) != 1:
+        candidate_names = ", ".join(os.path.basename(path) for path in candidates)
+        raise ImportError(
+            f"Could not find a compatible OpenEye runtime library for "
+            f"{expected_name!r} in {oe_lib_dir!r}. "
+            f"Candidates: {candidate_names or 'none'}."
+        )
+    return candidates[0], True
+
+
+def _ensure_cache_alias(cache_dir, expected_name, target_path):
+    """Create or refresh an expected-name symlink in the user cache."""
+    alias_path = cache_dir / expected_name
+    if alias_path.is_symlink():
+        if alias_path.resolve() == Path(target_path).resolve():
+            return alias_path
+        alias_path.unlink()
+    elif alias_path.exists():
+        raise ImportError(
+            f"Cannot create OpenEye compatibility alias {alias_path}: "
+            "a non-symlink file already exists at that path."
+        )
+
+    try:
+        alias_path.symlink_to(target_path)
+    except OSError as exc:
+        raise ImportError(
+            f"Could not create OpenEye compatibility alias "
+            f"{alias_path} -> {target_path}: {exc}"
+        ) from exc
+    return alias_path
+
 def _default_num_threads():
     """Return min(2, cpu_count), falling back to 1."""
     ncpu = os.cpu_count() or 1
     return min(ncpu, 2)
 
 
+
 def _ensure_library_compat():
-    """Create compatibility symlinks when OpenEye library versions differ from build time.
+    """Prepare compatibility aliases when OpenEye library filenames drift.
 
     When oemaestro is built with shared OpenEye libraries, the compiled extension
     records the exact versioned library filenames (e.g., liboechem-4.3.0.1.dylib).
     If the user upgrades openeye-toolkits, these filenames change and the dynamic
     linker fails to load the extension.
 
-    This function detects version mismatches and creates symlinks from the expected
-    (build-time) library names to the actual (runtime) library files.
+    This function creates expected-name aliases in a user-writable cache instead
+    of mutating the installed package directory. When aliases are needed, the
+    extension is later loaded from the same cache directory so its $ORIGIN lookup
+    can find those aliases.
     """
+    global _OPENEYE_COMPAT_EXTENSION_DIR, _OPENEYE_COMPAT_PRELOAD_PATHS
+
+    _OPENEYE_COMPAT_PRELOAD_PATHS = []
+    _OPENEYE_COMPAT_EXTENSION_DIR = None
+
     try:
         from . import _build_info
     except ImportError:
@@ -95,7 +212,9 @@ def _ensure_library_compat():
     if getattr(_build_info, 'OPENEYE_LIBRARY_TYPE', 'STATIC') != 'SHARED':
         return False
 
-    expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    expected_libs = _runtime_shared_library_names(
+        getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    )
     if not expected_libs:
         return False
 
@@ -106,43 +225,119 @@ def _ensure_library_compat():
     if not os.path.isdir(oe_lib_dir):
         return False
 
-    pkg_dir = os.path.dirname(__file__)
-    created_any = False
+    build_version = getattr(_build_info, 'OPENEYE_BUILD_VERSION', None)
+    runtime_version = _runtime_openeye_version()
+    cache_dir = (
+        _user_cache_root()
+        / "openeye-libs"
+        / _cache_key(oe_lib_dir, expected_libs, build_version, runtime_version)
+    )
 
+    preload_paths = []
+    needs_cached_origin = False
     for expected_name in expected_libs:
-        if os.path.exists(os.path.join(oe_lib_dir, expected_name)):
-            continue
-
-        symlink_path = os.path.join(pkg_dir, expected_name)
-        if os.path.islink(symlink_path):
-            if os.path.exists(symlink_path):
-                continue
+        actual_path, needs_alias = _compatible_library_path(oe_lib_dir, expected_name)
+        if needs_alias:
             try:
-                os.unlink(symlink_path)
-            except OSError:
-                continue
-        elif os.path.exists(symlink_path):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                raise ImportError(
+                    f"Could not create OpenEye compatibility cache directory "
+                    f"{cache_dir}: {exc}"
+                ) from exc
+            alias_path = _ensure_cache_alias(cache_dir, expected_name, actual_path)
+            preload_paths.append(str(alias_path))
+            needs_cached_origin = True
+        else:
+            preload_paths.append(actual_path)
+
+    _OPENEYE_COMPAT_PRELOAD_PATHS = preload_paths
+    if needs_cached_origin:
+        _OPENEYE_COMPAT_EXTENSION_DIR = cache_dir
+
+    return needs_cached_origin
+
+
+def _extension_suffixes():
+    """Return extension-module suffixes for the active Python interpreter."""
+    return tuple(importlib.machinery.EXTENSION_SUFFIXES)
+
+
+def _find_extension_module_path(pkg_dir):
+    """Find the installed _oemaestro extension file."""
+    for suffix in _extension_suffixes():
+        candidate = Path(pkg_dir) / f"_oemaestro{suffix}"
+        if candidate.is_file():
+            return candidate
+    for candidate in Path(pkg_dir).glob("_oemaestro*"):
+        if candidate.is_file() and str(candidate).endswith(_extension_suffixes()):
+            return candidate
+    return None
+
+
+def _copy_if_stale(source_path, target_path):
+    """Copy a file into the cache when size or mtime changed."""
+    if (
+        target_path.exists()
+        and target_path.stat().st_size == source_path.stat().st_size
+        and target_path.stat().st_mtime_ns == source_path.stat().st_mtime_ns
+    ):
+        return
+    shutil.copy2(source_path, target_path)
+
+
+def _copy_package_shared_sidecars(pkg_dir, cache_dir, extension_path):
+    """Copy package-local shared library sidecars needed by cached extension."""
+    for candidate in Path(pkg_dir).iterdir():
+        name = candidate.name
+        if not candidate.is_file() or candidate == extension_path:
             continue
-
-        match = re.match(r'(lib\w+?)(-[\d.]+)?(\.[\d.]*\w+)$', expected_name)
-        if not match:
+        if (
+            ".so" not in name
+            and not name.endswith(".dylib")
+            and not name.endswith(".dll")
+            and not name.endswith(".pyd")
+        ):
             continue
-        base_name = match.group(1)
+        _copy_if_stale(candidate, cache_dir / name)
 
-        actual_path = None
-        for f in os.listdir(oe_lib_dir):
-            if f.startswith(base_name + '-') or f.startswith(base_name + '.'):
-                actual_path = os.path.join(oe_lib_dir, f)
-                break
 
-        if actual_path:
-            try:
-                os.symlink(actual_path, os.path.join(pkg_dir, expected_name))
-                created_any = True
-            except OSError:
-                pass
+def _load_cached_extension_if_needed():
+    """Load _oemaestro from the cache when OpenEye aliases live there."""
+    cache_dir = _OPENEYE_COMPAT_EXTENSION_DIR
+    if cache_dir is None:
+        return
 
-    return created_any
+    module_name = f"{__name__}._oemaestro"
+    if module_name in sys.modules:
+        return
+
+    pkg_dir = os.path.dirname(__file__)
+    extension_path = _find_extension_module_path(pkg_dir)
+    if extension_path is None:
+        return
+
+    cached_extension_path = cache_dir / extension_path.name
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        _copy_if_stale(extension_path, cached_extension_path)
+        _copy_package_shared_sidecars(pkg_dir, cache_dir, extension_path)
+    except OSError as exc:
+        raise ImportError(
+            f"Could not prepare cached oemaestro extension in {cache_dir}: {exc}"
+        ) from exc
+
+    spec = importlib.util.spec_from_file_location(module_name, cached_extension_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not create import spec for {cached_extension_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
 
 
 def _preload_shared_libs():
@@ -173,7 +368,9 @@ def _preload_shared_libs():
     if getattr(_build_info, 'OPENEYE_LIBRARY_TYPE', 'STATIC') != 'SHARED':
         return
 
-    expected_libs = getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    expected_libs = _runtime_shared_library_names(
+        getattr(_build_info, 'OPENEYE_EXPECTED_LIBS', [])
+    )
     if not expected_libs:
         return
 
@@ -184,17 +381,20 @@ def _preload_shared_libs():
     if not os.path.isdir(oe_lib_dir):
         return
 
-    pkg_dir = os.path.dirname(__file__)
-    for lib_name in expected_libs:
-        oe_path = os.path.join(oe_lib_dir, lib_name)
-        local_path = os.path.join(pkg_dir, lib_name)
-        path = oe_path if os.path.exists(oe_path) else local_path
+    paths = _OPENEYE_COMPAT_PRELOAD_PATHS
+    if not paths:
+        paths = [
+            os.path.join(oe_lib_dir, lib_name)
+            for lib_name in expected_libs
+            if os.path.exists(os.path.join(oe_lib_dir, lib_name))
+        ]
+
+    for path in paths:
         if os.path.exists(path) or os.path.islink(path):
             try:
                 ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
             except OSError:
                 pass
-
 
 def _check_openeye_version():
     """Check that the OpenEye version matches what was used at build time."""
