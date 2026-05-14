@@ -277,6 +277,8 @@ def test_import_loads_extension_from_cache_when_openeye_aliases_are_needed(
     monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.setenv("XDG_CACHE_HOME", str(cache_home))
+    # Exercise the mocked Mach-O dependency path on every CI host OS.
+    monkeypatch.setattr(sys, "platform", "darwin")
     importlib.invalidate_caches()
 
     importlib.import_module(package)
