@@ -28,7 +28,7 @@ MolConverter::MolConverter(OEMaestroTag tags, OEMaestroPerception perception)
 // ReSharper restore CppParameterMayBeConst
     : tag_converter_(tags), perception_(perception) {}
 
-void MolConverter::Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const {
+void MolConverter::ConvertToOE(OEChem::OEMolBase& dst, const MaestroMol& src) const {
     dst.Clear();
     dst.SetTitle(src.title.c_str());
 
@@ -303,12 +303,12 @@ void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
 
 }  // anonymous namespace
 
-void MolConverter::Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const {
+void MolConverter::ConvertToMaestro(MaestroMol& dst, const OEChem::OEMolBase& src) const {
     PopulateMaestroMol(dst, src, nullptr, tag_converter_);
 }
 
-void MolConverter::Convert(std::vector<MaestroMol>& dst,
-                           const OEChem::OEMolBase& src) const {
+void MolConverter::ConvertToMaestro(std::vector<MaestroMol>& dst,
+                                    const OEChem::OEMolBase& src) const {
     dst.clear();
 
     // Try to cast to OEMCMolBase to access conformers.

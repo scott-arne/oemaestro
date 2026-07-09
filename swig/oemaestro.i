@@ -430,8 +430,8 @@ OE_CROSS_RUNTIME_REF_TYPEMAPS(OEDocking::OEReceptor, _oemaestro_is_oereceptor, "
 // Version macros
 // ============================================================================
 #define OEMAESTRO_VERSION_MAJOR 0
-#define OEMAESTRO_VERSION_MINOR 7
-#define OEMAESTRO_VERSION_PATCH 5
+#define OEMAESTRO_VERSION_MINOR 8
+#define OEMAESTRO_VERSION_PATCH 0
 
 // ============================================================================
 // Enums
@@ -586,8 +586,8 @@ public:
     MolConverter();
     explicit MolConverter(OEMaestroTag tags, OEMaestroPerception perception = PERCEPTION_ALL);
 
-    void Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const;
-    void Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const;
+    void ConvertToOE(OEChem::OEMolBase& dst, const MaestroMol& src) const;
+    void ConvertToMaestro(MaestroMol& dst, const OEChem::OEMolBase& src) const;
 
     void SetTagFormat(OEMaestroTag tags);
     OEMaestroTag GetTagFormat() const;

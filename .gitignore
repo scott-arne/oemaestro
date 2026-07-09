@@ -2,6 +2,9 @@
 # Prerequisites
 *.d
 
+build-*
+.gitignore.tmp__
+
 # Compiled Object files
 *.slo
 *.lo
@@ -308,6 +311,7 @@ cython_debug/
 # Custom
 docs/plans/
 docs/superpowers/
+docs/hyperpowers/
 .claude
 build-debug/
 python/oemaestro/_build_info.py

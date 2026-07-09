@@ -57,7 +57,7 @@ OEMaestroWriter& OEMaestroWriter::operator=(OEMaestroWriter&&) noexcept = defaul
 
 bool OEMaestroWriter::Write(const OEChem::OEMolBase& mol) {
     std::vector<MaestroMol> mmols;
-    converter_.Convert(mmols, mol);
+    converter_.ConvertToMaestro(mmols, mol);
     for (const auto& mmol : mmols) {  // NOLINT(readability-use-anyofallof)
         if (!writer_->Write(mmol)) return false;
     }

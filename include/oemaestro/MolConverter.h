@@ -11,8 +11,11 @@ namespace OEMaestro {
 
 /// Converts between MaestroMol IR and OpenEye OEMolBase.
 ///
-/// Handles both read direction (MaestroMol -> OEMolBase) and write direction
-/// (OEMolBase -> MaestroMol). Argument order follows OpenEye convention: (dst, src).
+/// The two directions have distinct method names rather than overloads of a
+/// single Convert. The write overload (MaestroMol, OEMolBase) would otherwise be
+/// indistinguishable from a read call written with the arguments transposed, and
+/// SWIG's pointer-based overload resolution would silently bind such a call to
+/// the wrong direction. Argument order follows OpenEye convention: (dst, src).
 class MolConverter {
 public:
     MolConverter();
@@ -20,16 +23,16 @@ public:
                           OEMaestroPerception perception = PERCEPTION_ALL);
 
     /// Read direction: MaestroMol -> OEMolBase.
-    void Convert(OEChem::OEMolBase& dst, const MaestroMol& src) const;
+    void ConvertToOE(OEChem::OEMolBase& dst, const MaestroMol& src) const;
 
     /// Write direction: OEMolBase -> MaestroMol (active conformer).
-    void Convert(MaestroMol& dst, const OEChem::OEMolBase& src) const;
+    void ConvertToMaestro(MaestroMol& dst, const OEChem::OEMolBase& src) const;
 
     /// Write direction: OEMolBase -> vector of MaestroMol (one per conformer).
     ///
     /// If src is a multi-conformer molecule (OEMCMolBase), produces one MaestroMol
     /// per conformer. Otherwise produces a single MaestroMol from the active conformer.
-    void Convert(std::vector<MaestroMol>& dst, const OEChem::OEMolBase& src) const;
+    void ConvertToMaestro(std::vector<MaestroMol>& dst, const OEChem::OEMolBase& src) const;
 
     void SetTagFormat(OEMaestroTag tags);
     OEMaestroTag GetTagFormat() const;          // NOLINT(modernize-use-nodiscard)

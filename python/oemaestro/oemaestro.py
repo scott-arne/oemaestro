@@ -659,8 +659,11 @@ class MolConverter(object):
     def __init__(self, *args):
         _oemaestro.MolConverter_swiginit(self, _oemaestro.new_MolConverter(*args))
 
-    def Convert(self, *args):
-        return _oemaestro.MolConverter_Convert(self, *args)
+    def ConvertToOE(self, dst, src):
+        return _oemaestro.MolConverter_ConvertToOE(self, dst, src)
+
+    def ConvertToMaestro(self, dst, src):
+        return _oemaestro.MolConverter_ConvertToMaestro(self, dst, src)
 
     def SetTagFormat(self, tags):
         return _oemaestro.MolConverter_SetTagFormat(self, tags)

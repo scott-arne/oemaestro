@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oemaestro"
-version = "0.7.5"
+version = "0.8.0"
 description = "Native Maestro format parser for OpenEye Toolkits"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -79,3 +79,23 @@ expected-missing-libs = [
 
 [tool.ruff.lint.per-file-ignores]
 "python/oemaestro/__init__.py" = ["E402"]
+
+# ----------------------------------------------------------------------------------------
+# Pyright / Pylance configuration (type checking and editor analysis)
+# https://microsoft.github.io/pyright/#/configuration
+# ----------------------------------------------------------------------------------------
+# Restrict analysis to this project's own source so Pylance does not crawl build
+# artifacts, scratch data, vendored trees, or the interpreter's site-packages.
+# Combined with the editor's workspace diagnostic mode this checks every project
+# file (open or not) while keeping memory bounded.
+[tool.pyright]
+include = ["python", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.*",
+    "build",
+    "build-*",
+    "cmake-build-*",
+    "dist",
+    "**/*.egg-info",
+]

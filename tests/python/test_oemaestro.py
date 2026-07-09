@@ -191,8 +191,41 @@ class TestLowLevelAPI:
         reader.Read(mmol)
         converter = MolConverter()
         mol = oechem.OEGraphMol()
-        converter.Convert(mol, mmol)
+        converter.ConvertToOE(mol, mmol)
         assert mol.NumAtoms() == 9
+
+    def test_mol_converter_direction_is_unambiguous(self, data_dir):
+        """The two conversion directions have distinct names so an argument-order
+        mistake is a loud error rather than a silent wrong-direction conversion.
+
+        Regression test for the pre-0.5.0 ``Convert(maestro_mol, oe_mol)`` order
+        that used to bind silently to the write overload and return an empty
+        molecule.
+        """
+        from oemaestro import MaestroReader, MaestroMol, MolConverter
+
+        reader = MaestroReader(f"{data_dir}/simple.mae")
+        mmol = MaestroMol()
+        reader.Read(mmol)
+        converter = MolConverter()
+
+        # The overloaded ``Convert`` no longer exists.
+        assert not hasattr(converter, "Convert")
+
+        # Read direction populates the OpenEye molecule.
+        mol = oechem.OEGraphMol()
+        converter.ConvertToOE(mol, mmol)
+        assert mol.NumAtoms() == 9
+
+        # Write direction round-trips back to the IR.
+        back = MaestroMol()
+        converter.ConvertToMaestro(back, mol)
+        assert back.NumAtoms() == 9
+
+        # Passing the arguments in the wrong order is a loud TypeError, not a
+        # silent empty result.
+        with pytest.raises(TypeError):
+            converter.ConvertToOE(mmol, mol)
 
     def test_maestro_mol_repr(self, data_dir):
         from oemaestro import MaestroReader, MaestroMol

@@ -43,7 +43,7 @@ TEST(MolConverterTest, ConvertSimpleMolecule) {
     MolConverter conv;
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     EXPECT_EQ(mol.NumAtoms(), 2u);
     EXPECT_EQ(mol.NumBonds(), 1u);
     EXPECT_STREQ(mol.GetTitle(), "TestMol");
@@ -53,7 +53,7 @@ TEST(MolConverterTest, ConvertCoordinates) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     OESystem::OEIter<OEChem::OEAtomBase> ai = mol.GetAtoms();
     float xyz[3];
     mol.GetCoords(&(*ai), xyz);
@@ -88,7 +88,7 @@ TEST(MolConverterTest, ConvertResidueInfo) {
     mm.atoms.push_back(n_atom);
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     auto atom = mol.GetAtoms();
     OEChem::OEResidue res = OEChem::OEAtomGetResidue(*atom);
     EXPECT_STREQ(res.GetName(), "ALA ");
@@ -109,7 +109,7 @@ TEST(MolConverterTest, TagFormatAll) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     EXPECT_TRUE(mol.HasData("r_m_pdb_tfactor"));
     EXPECT_DOUBLE_EQ(mol.GetDoubleData("r_m_pdb_tfactor"), 20.0);
 }
@@ -125,7 +125,7 @@ TEST(MolConverterTest, TagFormatNameOnly) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     EXPECT_TRUE(mol.HasData("pdb_tfactor"));
     EXPECT_DOUBLE_EQ(mol.GetDoubleData("pdb_tfactor"), 20.0);
     EXPECT_FALSE(mol.HasData("r_m_pdb_tfactor"));
@@ -142,7 +142,7 @@ TEST(MolConverterTest, TagFormatNone) {
     mm.ct_properties["r_m_pdb_tfactor"] = "20.0";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     // With TAG_NONE, no ct_properties should be stored as generic data.
     // Note: GetDataIter() returns a raw OEIterBase* — must use explicit
     // OEIter<OEBaseData> type, not auto (auto deduces a raw pointer whose
@@ -168,7 +168,7 @@ TEST(MolConverterTest, TypedDataFromPrefix) {
     mm.ct_properties["b_sd_chiral_flag"] = "1";
 
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
 
     EXPECT_EQ(mol.GetIntData("i_m_ct_format"), 2);
     EXPECT_DOUBLE_EQ(mol.GetDoubleData("r_sd_MolWt"), 180.156);
@@ -180,7 +180,7 @@ TEST(MolConverterTest, ConvertBondOrder) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();  // Has order=2 bond
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     OESystem::OEIter<OEChem::OEBondBase> bi = mol.GetBonds();
     EXPECT_EQ(bi->GetOrder(), 2u);
 }
@@ -190,7 +190,7 @@ TEST(MolConverterTest, ConvertTitle) {
     auto mm = make_simple_mol();
     mm.title = "My Molecule";
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     EXPECT_STREQ(mol.GetTitle(), "My Molecule");
 }
 
@@ -209,14 +209,14 @@ TEST(MolConverterTest, InvalidBondIndexThrows) {
     mm.bonds.push_back(bond);
 
     OEChem::OEGraphMol mol;
-    EXPECT_THROW(conv.Convert(mol, mm), MaestroConvertError);
+    EXPECT_THROW(conv.ConvertToOE(mol, mm), MaestroConvertError);
 }
 
 TEST(MolConverterTest, PerceptionNone) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();
     OEChem::OEGraphMol mol;
-    conv.Convert(mol, mm);
+    conv.ConvertToOE(mol, mm);
     EXPECT_EQ(mol.NumAtoms(), 2u);
     // Just verify it completes without error
 }
@@ -240,7 +240,7 @@ TEST(MolConverterTest, WriteDirection_SingleAtom) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.title, "test");
     EXPECT_EQ(mmol.NumAtoms(), 1u);
@@ -260,7 +260,7 @@ TEST(MolConverterTest, WriteDirection_BondsAndCharges) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.NumAtoms(), 2u);
     EXPECT_EQ(mmol.NumBonds(), 1u);
@@ -278,7 +278,7 @@ TEST(MolConverterTest, WriteDirection_IsotopeAndPartialCharge) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.atoms[0].isotope, 13);
     EXPECT_NEAR(mmol.atoms[0].partial_charge, 0.25, 1e-6);
@@ -300,7 +300,7 @@ TEST(MolConverterTest, WriteDirection_ResidueInfo) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.atoms[0].atom_name, " CA ");
     EXPECT_EQ(mmol.atoms[0].residue_name, "ALA");
@@ -321,7 +321,7 @@ TEST(MolConverterTest, WriteDirection_SDData) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.ct_properties.count("r_m_mol_weight"), 1u);
     EXPECT_EQ(mmol.ct_properties.at("r_m_mol_weight"), "44.01");
@@ -335,7 +335,7 @@ TEST(MolConverterTest, WriteDirection_EmptyMolecule) {
 
     MolConverter converter;
     MaestroMol mmol;
-    converter.Convert(mmol, mol);
+    converter.ConvertToMaestro(mmol, mol);
 
     EXPECT_EQ(mmol.title, "empty");
     EXPECT_EQ(mmol.NumAtoms(), 0u);
@@ -356,7 +356,7 @@ TEST(MolConverterTest, WriteDirection_MultiConformer) {
 
     MolConverter converter;
     std::vector<MaestroMol> mmols;
-    converter.Convert(mmols, mol);
+    converter.ConvertToMaestro(mmols, mol);
 
     EXPECT_EQ(mmols.size(), 2u);
     EXPECT_EQ(mmols[0].NumAtoms(), 2u);
