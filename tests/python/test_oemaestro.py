@@ -194,6 +194,13 @@ class TestLowLevelAPI:
         converter.ConvertToOE(mol, mmol)
         assert mol.NumAtoms() == 9
 
+    def test_layer1_reader_reads_gzip(self, data_dir):
+        from oemaestro import MaestroReader, MaestroMol
+        reader = MaestroReader(f"{data_dir}/simple.mae.gz")
+        mm = MaestroMol()
+        assert reader.Read(mm)
+        assert mm.NumAtoms() == 9
+
     def test_mol_converter_direction_is_unambiguous(self, data_dir):
         """The two conversion directions have distinct names so an argument-order
         mistake is a loud error rather than a silent wrong-direction conversion.

@@ -85,6 +85,20 @@ class TestOEMaestroWriter:
         assert mols[0].GetTitle() == "mol1"
         assert mols[1].GetTitle() == "mol2"
 
+    def test_layer1_writer_gzip_round_trip(self, tmp_dir):
+        from oemaestro import MaestroReader, MaestroWriter, MaestroMol
+        path = tmp_dir / "layer1.mae.gz"
+        mmol = MaestroMol()
+        # Populate via the writer converter path: read a known file, write gz, read back.
+        src = MaestroReader("tests/data/simple.mae")
+        assert src.Read(mmol)
+        writer = MaestroWriter(str(path))
+        assert writer.Write(mmol)
+        writer.Close()
+        back = MaestroMol()
+        assert MaestroReader(str(path)).Read(back)
+        assert back.NumAtoms() == mmol.NumAtoms()
+
 
 class TestOEWriteMaestro:
     def test_free_function(self, tmp_dir):
