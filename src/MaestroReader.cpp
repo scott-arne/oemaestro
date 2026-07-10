@@ -1,4 +1,5 @@
 #include "oemaestro/MaestroReader.h"
+#include "oemaestro/StreamAdapter.h"
 #include "oemaestro/Error.h"
 
 #include <Reader.hpp>
@@ -30,7 +31,12 @@ struct MaestroReader::Impl {
 
     explicit Impl(const std::string& filename) {
         try {
-            reader = std::make_unique<schrodinger::mae::Reader>(filename);
+            if (is_gzip_filename(filename)) {
+                reader = std::make_unique<schrodinger::mae::Reader>(
+                    make_gzip_istream(filename));
+            } else {
+                reader = std::make_unique<schrodinger::mae::Reader>(filename);
+            }
         } catch (const std::exception& e) {
             throw MaestroParseError("Failed to open Maestro file '" +
                                     filename + "': " + e.what());

@@ -62,11 +62,12 @@ TEST(MaestroReaderTest, ReadProteinWithResidueInfo) {
     }
 }
 
-TEST(MaestroReaderTest, GzipFilenameThrowsWithoutBoost) {
-    EXPECT_THROW(
-        OEMaestro::MaestroReader(DATA_DIR + "/simple.mae.gz"),
-        std::runtime_error
-    );
+TEST(MaestroReaderTest, ReadsGzipFilename) {
+    OEMaestro::MaestroReader reader(DATA_DIR + "/simple.mae.gz");
+    OEMaestro::MaestroMol mol;
+    ASSERT_TRUE(reader.Read(mol));
+    EXPECT_EQ(mol.title, "Ethanol");
+    EXPECT_EQ(mol.NumAtoms(), 9u);
 }
 
 TEST(MaestroReaderTest, NonExistentFileThrows) {
