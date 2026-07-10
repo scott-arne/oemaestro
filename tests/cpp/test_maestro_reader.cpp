@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include "oemaestro/MaestroReader.h"
+#include "oemaestro/StreamAdapter.h"
 #include "oemaestro/Error.h"
 
 static const std::string DATA_DIR = TEST_DATA_DIR;
@@ -108,4 +109,12 @@ TEST(MaestroReaderTest, MoveConstructor) {
     OEMaestro::MaestroMol mol;
     ASSERT_TRUE(reader2.Read(mol));
     EXPECT_EQ(mol.title, "Ethanol");
+}
+
+TEST(StreamAdapterTest, IsGzipFilename) {
+    EXPECT_TRUE(OEMaestro::is_gzip_filename("x.mae.gz"));
+    EXPECT_TRUE(OEMaestro::is_gzip_filename("x.maegz"));
+    EXPECT_FALSE(OEMaestro::is_gzip_filename("x.mae"));
+    EXPECT_FALSE(OEMaestro::is_gzip_filename("x.gz"));
+    EXPECT_FALSE(OEMaestro::is_gzip_filename(""));
 }

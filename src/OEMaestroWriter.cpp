@@ -6,19 +6,11 @@ namespace OEMaestro {
 
 namespace {
 
-bool IsGzipFilename(const std::string& filename) {
-    if (filename.size() >= 7 && filename.substr(filename.size() - 7) == ".mae.gz")
-        return true;
-    if (filename.size() >= 6 && filename.substr(filename.size() - 6) == ".maegz")
-        return true;
-    return false;
-}
-
 }  // namespace
 
 OEMaestroWriter::OEMaestroWriter(const std::string& filename, OEMaestroWriteMode mode)
     : converter_(TAG_ALL, PERCEPTION_NONE) {
-    if (IsGzipFilename(filename)) {
+    if (is_gzip_filename(filename)) {
         if (mode == WRITE_APPEND) {
             throw OEMaestroError("APPEND mode is not supported for compressed files");
         }
@@ -32,7 +24,7 @@ OEMaestroWriter::OEMaestroWriter(const std::string& filename,
                                  const OEMaestroWriterConfig& config)
     : converter_(config.GetTags(), PERCEPTION_NONE) {
     OEMaestroWriteMode mode = config.GetMode();
-    if (IsGzipFilename(filename)) {
+    if (is_gzip_filename(filename)) {
         if (mode == WRITE_APPEND) {
             throw OEMaestroError("APPEND mode is not supported for compressed files");
         }

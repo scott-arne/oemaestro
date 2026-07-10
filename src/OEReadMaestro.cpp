@@ -6,10 +6,6 @@
 namespace OEMaestro {
 
 namespace {
-bool IsGzipFilename(const std::string& f) {
-    return (f.size() >= 7 && f.substr(f.size() - 7) == ".mae.gz") ||
-           (f.size() >= 6 && f.substr(f.size() - 6) == ".maegz");
-}
 }  // namespace
 
 OEMaestroReader OEReadMaestro(const std::string& filename,
@@ -26,7 +22,7 @@ bool OEReadMaestro(const std::string& filename, OEChem::OEMolBase& mol,
                     OEMaestroReaderConfig config) {
     std::shared_ptr<std::istream> stream;
     OEPlatform::oeifstream ifs;
-    if (IsGzipFilename(filename)) {
+    if (is_gzip_filename(filename)) {
         stream = make_gzip_istream(filename);
     } else {
         ifs.open(filename);

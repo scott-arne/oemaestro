@@ -129,6 +129,9 @@ private:
     GzipInputBuf buf_;
 };
 
+/// Returns true if the filename has a gzip Maestro extension (.mae.gz or .maegz).
+bool is_gzip_filename(const std::string& filename);
+
 /// Creates a shared_ptr<istream> for a gzip file, suitable for maeparser.
 std::shared_ptr<std::istream> make_gzip_istream(const std::string& filename);
 

@@ -1,4 +1,5 @@
 #include "oemaestro/MaestroWriter.h"
+#include "oemaestro/StreamAdapter.h"
 #include "oemaestro/Error.h"
 
 #include <Writer.hpp>
@@ -14,15 +15,6 @@ namespace mae = schrodinger::mae;
 namespace OEMaestro {
 
 namespace {
-
-bool IsGzipFilename(const std::string& filename) {
-    // Check for .mae.gz or .maegz extension
-    if (filename.size() >= 7 && filename.substr(filename.size() - 7) == ".mae.gz")
-        return true;
-    if (filename.size() >= 6 && filename.substr(filename.size() - 6) == ".maegz")
-        return true;
-    return false;
-}
 
 /// Build a maeparser Block from a MaestroMol.
 std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
@@ -254,7 +246,7 @@ struct MaestroWriter::Impl {
 
     Impl(const std::string& filename, OEMaestroWriteMode m) : mode(m) {
         if (m == WRITE_APPEND) {
-            if (IsGzipFilename(filename)) {
+            if (is_gzip_filename(filename)) {
                 throw OEMaestroError("APPEND mode is not supported for compressed files");
             }
             stream = std::make_shared<std::ofstream>(

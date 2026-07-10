@@ -104,6 +104,11 @@ GzipInputBuf::int_type GzipInputBuf::underflow() {
 GzipInputStream::GzipInputStream(const std::string& filename)
     : std::istream(&buf_), buf_(filename) {}
 
+bool is_gzip_filename(const std::string& filename) {
+    return (filename.size() >= 7 && filename.substr(filename.size() - 7) == ".mae.gz") ||
+           (filename.size() >= 6 && filename.substr(filename.size() - 6) == ".maegz");
+}
+
 std::shared_ptr<std::istream> make_gzip_istream(const std::string& filename) {
     return std::make_shared<GzipInputStream>(filename);
 }
