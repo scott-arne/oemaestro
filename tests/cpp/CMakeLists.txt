@@ -49,5 +49,13 @@ target_compile_definitions(oemaestro_tests PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data"
 )
 
+# Under a SHARED OpenEye build (dev/editable), the openeye-toolkits dylibs use
+# @rpath install names, so the test executable needs an RPATH to the package's
+# runtime library directory to load them (also needed by gtest_discover_tests).
+if(OpenEye_LIBRARY_TYPE STREQUAL "SHARED" AND OPENEYE_RUNTIME_LIB_DIR)
+    set_target_properties(oemaestro_tests PROPERTIES
+        BUILD_RPATH "${OPENEYE_RUNTIME_LIB_DIR}")
+endif()
+
 include(GoogleTest)
 gtest_discover_tests(oemaestro_tests)

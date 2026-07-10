@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MaestroParseError` (as the `MaestroReader` / `MaestroWriter` constructors
   document) instead of failing silently; the gzip stream adapters throw when
   `gzopen` fails.
+- Editable / source builds via the CMake presets now link OpenEye's shared
+  libraries (`OPENEYE_USE_SHARED=ON`), matching the release wheels. A static
+  OpenEye build loads a second OpenEye runtime with its own tag registry, so
+  CT-level generic-data / SD-data tags did not interoperate with the `openeye`
+  Python package and CT properties were silently dropped by `ConvertToMaestro`
+  / `ConvertToOE` in both directions.
 
 ### Changed
 
