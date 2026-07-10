@@ -256,7 +256,11 @@ struct MaestroWriter::Impl {
             }
         } else {
             try {
-                writer = std::make_unique<mae::Writer>(filename);
+                if (is_gzip_filename(filename)) {
+                    writer = std::make_unique<mae::Writer>(make_gzip_ostream(filename));
+                } else {
+                    writer = std::make_unique<mae::Writer>(filename);
+                }
             } catch (const std::exception& e) {
                 throw MaestroParseError("Failed to open file for writing: " + filename + ": " + e.what());
             }
