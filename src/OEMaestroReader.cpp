@@ -12,9 +12,6 @@
 
 namespace OEMaestro {
 
-namespace {
-}  // namespace
-
 struct OEMaestroReader::Impl {
     std::unique_ptr<OEPlatform::oeifstream> owned_ifs_;
     std::unique_ptr<MaestroReader> reader;

@@ -77,6 +77,13 @@ TEST(MaestroReaderTest, NonExistentFileThrows) {
     );
 }
 
+TEST(MaestroReaderTest, NonExistentGzipFileThrows) {
+    EXPECT_THROW(
+        OEMaestro::MaestroReader(DATA_DIR + "/does_not_exist.mae.gz"),
+        OEMaestro::MaestroParseError
+    );
+}
+
 TEST(MaestroReaderTest, EndOfFileReturnsFalse) {
     OEMaestro::MaestroReader reader(DATA_DIR + "/simple.mae");
     OEMaestro::MaestroMol mol;

@@ -95,6 +95,8 @@ class TestOEMaestroWriter:
         writer = MaestroWriter(str(path))
         assert writer.Write(mmol)
         writer.Close()
+        # The file must be genuinely gzip-compressed (magic bytes 0x1f 0x8b).
+        assert path.read_bytes()[:2] == b"\x1f\x8b"
         back = MaestroMol()
         assert MaestroReader(str(path)).Read(back)
         assert back.NumAtoms() == mmol.NumAtoms()

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   behavior documented in their headers. Previously the filename constructors
   passed the path straight to maeparser, which cannot open gzip in this build
   (compiled without boost::iostreams), so compressed files failed to open.
+- Opening a gzip Maestro file that cannot be opened now raises
+  `MaestroParseError` (as the `MaestroReader` / `MaestroWriter` constructors
+  document) instead of failing silently; the gzip stream adapters throw when
+  `gzopen` fails.
 
 ### Changed
 

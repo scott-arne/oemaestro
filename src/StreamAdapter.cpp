@@ -1,5 +1,6 @@
 #include "oemaestro/StreamAdapter.h"
 #include <cstring>
+#include <stdexcept>
 
 namespace OEMaestro {
 
@@ -80,6 +81,9 @@ std::shared_ptr<std::ostream> make_maeparser_ostream(OEPlatform::oeofstream& ofs
 
 GzipInputBuf::GzipInputBuf(const std::string& filename, size_t buf_size)
     : gz_(gzopen(filename.c_str(), "rb")), buffer_(buf_size) {
+    if (!gz_) {
+        throw std::runtime_error("Failed to open gzip file for reading: " + filename);
+    }
     setg(buffer_.data(), buffer_.data(), buffer_.data());
 }
 
@@ -115,6 +119,9 @@ std::shared_ptr<std::istream> make_gzip_istream(const std::string& filename) {
 
 GzipOutputBuf::GzipOutputBuf(const std::string& filename, size_t buf_size)
     : gz_(gzopen(filename.c_str(), "wb")), buffer_(buf_size + 1) {
+    if (!gz_) {
+        throw std::runtime_error("Failed to open gzip file for writing: " + filename);
+    }
     setp(buffer_.data(), buffer_.data() + buf_size);
 }
 

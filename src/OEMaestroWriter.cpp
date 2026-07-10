@@ -4,10 +4,6 @@
 
 namespace OEMaestro {
 
-namespace {
-
-}  // namespace
-
 OEMaestroWriter::OEMaestroWriter(const std::string& filename, OEMaestroWriteMode mode)
     : converter_(TAG_ALL, PERCEPTION_NONE) {
     if (is_gzip_filename(filename)) {

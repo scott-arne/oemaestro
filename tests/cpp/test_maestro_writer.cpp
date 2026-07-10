@@ -131,11 +131,24 @@ TEST_F(MaestroWriterTest, WritesGzipFilenameRoundTrip) {
         EXPECT_TRUE(writer.Write(mol));
         writer.Close();
     }
+    // The file must be genuinely gzip-compressed (magic bytes 0x1f 0x8b).
+    {
+        std::ifstream raw(path, std::ios::binary);
+        unsigned char magic[2] = {0, 0};
+        raw.read(reinterpret_cast<char*>(magic), 2);
+        EXPECT_EQ(magic[0], 0x1fu);
+        EXPECT_EQ(magic[1], 0x8bu);
+    }
     MaestroReader reader(path);
     MaestroMol read_mol;
     ASSERT_TRUE(reader.Read(read_mol));
     EXPECT_EQ(read_mol.title, "gztest");
     EXPECT_EQ(read_mol.NumAtoms(), mol.NumAtoms());
+}
+
+TEST_F(MaestroWriterTest, UnwritableGzipPathThrows) {
+    std::string path = (tmp_dir_ / "no_such_subdir" / "x.mae.gz").string();
+    EXPECT_THROW(MaestroWriter(path, WRITE_CREATE), MaestroParseError);
 }
 
 TEST_F(MaestroWriterTest, WriteToClosedThrows) {

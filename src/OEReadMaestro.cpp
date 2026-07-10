@@ -5,9 +5,6 @@
 
 namespace OEMaestro {
 
-namespace {
-}  // namespace
-
 OEMaestroReader OEReadMaestro(const std::string& filename,
                                 OEMaestroReaderConfig config) {
     return OEMaestroReader(filename, config);

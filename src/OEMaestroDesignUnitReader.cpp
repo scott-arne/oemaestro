@@ -7,9 +7,6 @@
 
 namespace OEMaestro {
 
-namespace {
-}  // namespace
-
 // --- Default predicates ---
 
 class IsLigandAtom : public OESystem::OEUnaryPredicate<OEChem::OEAtomBase> {
