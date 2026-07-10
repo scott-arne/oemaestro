@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1]
+
+### Fixed
+
+- Layer-1 `MaestroReader(filename)` and `MaestroWriter(filename)` now honor
+  `.mae.gz` / `.maegz` filenames, matching the Layer-3 readers/writers and the
+  behavior documented in their headers. Previously the filename constructors
+  passed the path straight to maeparser, which cannot open gzip in this build
+  (compiled without boost::iostreams), so compressed files failed to open.
+
+### Changed
+
+- Consolidated the duplicated `IsGzipFilename` extension check into a single
+  shared `OEMaestro::is_gzip_filename` helper in `StreamAdapter`.
+
 ## [0.8.0]
 
 ### Changed

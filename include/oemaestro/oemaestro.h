@@ -6,7 +6,7 @@
 /** @brief Minor version number */
 #define OEMAESTRO_VERSION_MINOR 8
 /** @brief Patch version number */
-#define OEMAESTRO_VERSION_PATCH 0
+#define OEMAESTRO_VERSION_PATCH 1
 
 #include "oemaestro/Error.h"
 #include "oemaestro/Enums.h"
