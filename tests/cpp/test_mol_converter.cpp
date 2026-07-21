@@ -49,6 +49,43 @@ TEST(MolConverterTest, ConvertSimpleMolecule) {
     EXPECT_STREQ(mol.GetTitle(), "TestMol");
 }
 
+TEST(MolConverterTest, DeduplicatesReverseListedBond) {
+    // Maestro m_bond blocks can list the same bond in both directions (a->b and b->a).
+    // The converter must produce a single OEBond, not a parallel duplicate.
+    MaestroMol mm;
+    mm.title = "DupBond";
+
+    MaestroAtom a1;
+    a1.atomic_number = 6;
+    a1.occupancy = 1.0;
+    mm.atoms.push_back(a1);
+
+    MaestroAtom a2;
+    a2.atomic_number = 6;
+    a2.x = 1.5;
+    a2.occupancy = 1.0;
+    mm.atoms.push_back(a2);
+
+    MaestroBond forward;
+    forward.atom1_index = 0;
+    forward.atom2_index = 1;
+    forward.order = 1;
+    mm.bonds.push_back(forward);
+
+    MaestroBond reverse;  // same bond, opposite direction
+    reverse.atom1_index = 1;
+    reverse.atom2_index = 0;
+    reverse.order = 1;
+    mm.bonds.push_back(reverse);
+
+    MolConverter conv;
+    OEChem::OEGraphMol mol;
+    conv.ConvertToOE(mol, mm);
+
+    EXPECT_EQ(mol.NumAtoms(), 2u);
+    EXPECT_EQ(mol.NumBonds(), 1u);
+}
+
 TEST(MolConverterTest, ConvertCoordinates) {
     MolConverter conv(TAG_ALL, PERCEPTION_NONE);
     auto mm = make_simple_mol();

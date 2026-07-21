@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3]
+
+### Fixed
+
+- The Maestro reader no longer creates duplicate bonds. Maestro `m_bond` blocks
+  can list the same bond in both directions (`a->b` and `b->a`); the converter
+  previously created a parallel `OEBond` for each entry, producing molecules that
+  serialized to invalid SD/MOL bond blocks OEChem itself could not read back
+  (observed on prepared structures, pose-viewer files, and complexes). The
+  converter now skips a bond whose atom pair is already bonded.
+
 ## [0.8.2]
 
 ### Fixed

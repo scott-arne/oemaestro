@@ -81,10 +81,17 @@ void MolConverter::ConvertToOE(OEChem::OEMolBase& dst, const MaestroMol& src) co
                 " atom2=" + std::to_string(bond.atom2_index) +
                 " num_atoms=" + std::to_string(atom_ptrs.size()));
         }
-        dst.NewBond(
-            atom_ptrs[static_cast<size_t>(bond.atom1_index)],
-            atom_ptrs[static_cast<size_t>(bond.atom2_index)],
-            static_cast<unsigned int>(bond.order));
+        OEChem::OEAtomBase* atom1 = atom_ptrs[static_cast<size_t>(bond.atom1_index)];
+        OEChem::OEAtomBase* atom2 = atom_ptrs[static_cast<size_t>(bond.atom2_index)];
+
+        // Maestro m_bond blocks can list the same bond in both directions (a->b and b->a).
+        // OpenEye represents a bond once, so skip the reverse-duplicate entry; creating a
+        // parallel OEBond otherwise serializes to invalid SD/MOL bond blocks that OEChem
+        // itself cannot read back.
+        if (dst.GetBond(atom1, atom2))
+            continue;
+
+        dst.NewBond(atom1, atom2, static_cast<unsigned int>(bond.order));
     }
 
     auto dimension = static_cast<int>(OEChem::OEGetDimensionFromCoords(dst));
