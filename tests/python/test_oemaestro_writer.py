@@ -85,6 +85,63 @@ class TestOEMaestroWriter:
         assert mols[0].GetTitle() == "mol1"
         assert mols[1].GetTitle() == "mol2"
 
+    def test_reversed_bond_order_normalized(self, tmp_dir):
+        """Regression: a bond built with begin-idx > end-idx must emit i_m_from < i_m_to.
+
+        The legacy MMCT m2io reader (structconvert / Maestro import) rejects
+        files where i_m_from > i_m_to, even though maeparser tolerates either
+        ordering.
+        """
+        from oemaestro import MaestroReader, MaestroMol
+
+        mol = oechem.OEGraphMol()
+        a = mol.NewAtom(6)  # atom index 0
+        b = mol.NewAtom(6)  # atom index 1
+        mol.SetCoords(a, (0.0, 0.0, 0.0))
+        mol.SetCoords(b, (1.5, 0.0, 0.0))
+        mol.NewBond(b, a, 1)  # begin=idx1, end=idx0 -> reversed order
+        mol.SetTitle("revbond")
+
+        path = tmp_dir / "revbond.mae"
+        with oemaestro.OEMaestroWriter(str(path)) as writer:
+            assert writer.write(mol)
+
+        # MaestroReader copies the emitted i_m_from/i_m_to into
+        # atom1_index/atom2_index, so this asserts on the emitted ordering.
+        reader = MaestroReader(str(path))
+        mmol = MaestroMol()
+        assert reader.Read(mmol)
+        assert mmol.NumBonds() == 1
+        bond = mmol.bonds[0]
+        assert bond.atom1_index < bond.atom2_index
+
+    def test_sd_data_key_with_space_is_readable(self, tmp_dir):
+        """Regression: SD-data tags with spaces must produce readable files.
+
+        POSIT emits tags like ``POSIT receptor filename`` (with a space). A
+        Maestro property key cannot contain whitespace, so both the legacy MMCT
+        reader and maeparser reject such a file. The writer must sanitize the
+        key so the file round-trips.
+        """
+        from oemaestro import MaestroReader, MaestroMol
+
+        mol = oechem.OEGraphMol()
+        c = mol.NewAtom(6)
+        mol.SetCoords(c, (0.0, 0.0, 0.0))
+        mol.SetTitle("posit")
+        oechem.OESetSDData(mol, "POSIT receptor filename", "receptor.oedu")
+
+        path = tmp_dir / "posit.mae"
+        with oemaestro.OEMaestroWriter(str(path)) as writer:
+            assert writer.write(mol)
+
+        # Before the fix, maeparser rejects the spaced key and Read raises.
+        reader = MaestroReader(str(path))
+        mmol = MaestroMol()
+        assert reader.Read(mmol)
+        for key in mmol.ct_properties.keys():
+            assert " " not in key, f"emitted key contains whitespace: {key!r}"
+
     def test_layer1_writer_gzip_round_trip(self, tmp_dir):
         from oemaestro import MaestroReader, MaestroWriter, MaestroMol
         path = tmp_dir / "layer1.mae.gz"

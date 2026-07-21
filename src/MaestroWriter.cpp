@@ -7,6 +7,7 @@
 #include <MaeConstants.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <map>
 
@@ -16,6 +17,22 @@ namespace OEMaestro {
 
 namespace {
 
+/// Replace whitespace in a Maestro property key with underscores.
+///
+/// Maestro/m2io property keys are whitespace-delimited tokens of the form
+/// ``<type>_<owner>_<name>``. A key containing whitespace (e.g. a POSIT SD tag
+/// such as ``POSIT receptor filename``) is rejected both by the legacy MMCT
+/// m2io reader (structconvert, Maestro import) and by maeparser. Whitespace is
+/// never valid inside a key, so substituting underscores is a safe repair that
+/// never alters an already-valid key.
+std::string sanitize_maestro_key(const std::string& key) {
+    std::string out = key;
+    for (char& c : out) {
+        if (std::isspace(static_cast<unsigned char>(c))) c = '_';
+    }
+    return out;
+}
+
 /// Build a maeparser Block from a MaestroMol.
 std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
     auto block = std::make_shared<mae::Block>(mae::CT_BLOCK);
@@ -24,7 +41,8 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
     block->setStringProperty(mae::CT_TITLE, mol.title);
 
     // Set CT-level properties (type-aware based on t_o_d prefix)
-    for (const auto& [key, val] : mol.ct_properties) {
+    for (const auto& [raw_key, val] : mol.ct_properties) {
+        const std::string key = sanitize_maestro_key(raw_key);
         if (key.size() >= 4 && key[1] == '_') {
             char type_char = key[0];
             switch (type_char) {
@@ -166,6 +184,9 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
         }
 
         for (const auto& [key, _] : prop_keys) {
+            // Look up per-atom values under the original key, but emit a
+            // whitespace-free key (see sanitize_maestro_key).
+            const std::string ekey = sanitize_maestro_key(key);
             char type_char = (key.size() >= 4 && key[1] == '_') ? key[0] : 's';
             switch (type_char) {
                 case 'i': case 'b': {
@@ -176,7 +197,7 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
                             try { vals[i] = std::stoi(it->second); } catch (...) {}
                         }
                     }
-                    atom_block->setIntProperty(key,
+                    atom_block->setIntProperty(ekey,
                         std::make_shared<mae::IndexedIntProperty>(vals));
                     break;
                 }
@@ -188,7 +209,7 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
                             try { vals[i] = std::stod(it->second); } catch (...) {}
                         }
                     }
-                    atom_block->setRealProperty(key,
+                    atom_block->setRealProperty(ekey,
                         std::make_shared<mae::IndexedRealProperty>(vals));
                     break;
                 }
@@ -199,7 +220,7 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
                         if (it != mol.atoms[i].properties.end())
                             vals[i] = it->second;
                     }
-                    atom_block->setStringProperty(key,
+                    atom_block->setStringProperty(ekey,
                         std::make_shared<mae::IndexedStringProperty>(vals));
                     break;
                 }
@@ -216,9 +237,14 @@ std::shared_ptr<mae::Block> BuildBlock(const MaestroMol& mol) {
 
         std::vector<int> from_indices(nb), to_indices(nb), orders(nb);
         for (size_t i = 0; i < nb; ++i) {
-            // Maestro uses 1-based indices
-            from_indices[i] = mol.bonds[i].atom1_index + 1;
-            to_indices[i] = mol.bonds[i].atom2_index + 1;
+            // Maestro uses 1-based indices. The legacy MMCT m2io reader
+            // (structconvert, Maestro import) requires i_m_from < i_m_to, so
+            // emit the lower atom index as the "from" endpoint regardless of
+            // the source bond's begin/end ordering.
+            int a1 = mol.bonds[i].atom1_index + 1;
+            int a2 = mol.bonds[i].atom2_index + 1;
+            from_indices[i] = std::min(a1, a2);
+            to_indices[i] = std::max(a1, a2);
             orders[i] = mol.bonds[i].order;
         }
 

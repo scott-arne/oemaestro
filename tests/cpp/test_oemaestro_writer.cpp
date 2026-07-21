@@ -46,6 +46,64 @@ TEST_F(OEMaestroWriterTest, WriteGraphMol) {
     EXPECT_EQ(read_mol.NumBonds(), 1u);
 }
 
+TEST_F(OEMaestroWriterTest, NormalizesReversedBondEndpoints) {
+    // Regression: a bond whose begin-atom index exceeds its end-atom index
+    // (common for PDB/protein-derived molecules) must still be written with
+    // i_m_from < i_m_to, or the legacy MMCT m2io reader (structconvert,
+    // Maestro import) rejects the file.
+    OEChem::OEGraphMol mol;
+    auto* a = mol.NewAtom(6);   // atom index 0
+    auto* b = mol.NewAtom(6);   // atom index 1
+    mol.NewBond(b, a, 1);       // begin=idx1, end=idx0 -> reversed order
+    float coords[] = {0.0f, 0.0f, 0.0f, 1.5f, 0.0f, 0.0f};
+    mol.SetCoords(coords);
+    mol.SetTitle("revbond");
+
+    auto path = (tmp_dir_ / "revbond.mae").string();
+    {
+        OEMaestroWriter writer(path);
+        EXPECT_TRUE(writer.Write(mol));
+        writer.Close();
+    }
+
+    // MaestroReader copies the emitted i_m_from / i_m_to directly into
+    // atom1_index / atom2_index, so this asserts on the emitted ordering.
+    MaestroReader reader(path);
+    MaestroMol read_mol;
+    ASSERT_TRUE(reader.Read(read_mol));
+    ASSERT_EQ(read_mol.NumBonds(), 1u);
+    EXPECT_LT(read_mol.bonds[0].atom1_index, read_mol.bonds[0].atom2_index);
+}
+
+TEST_F(OEMaestroWriterTest, SanitizesWhitespaceInSDDataKeys) {
+    // Regression: SD-data tags with spaces (e.g. POSIT's "POSIT receptor
+    // filename") become Maestro property keys. Whitespace is invalid in a
+    // Maestro key, so the emitted file must be readable back.
+    OEChem::OEGraphMol mol;
+    auto* c = mol.NewAtom(6);
+    float coords[] = {0.0f, 0.0f, 0.0f};
+    mol.SetCoords(coords);
+    (void)c;
+    mol.SetTitle("posit");
+    OEChem::OESetSDData(mol, "POSIT receptor filename", "receptor.oedu");
+
+    auto path = (tmp_dir_ / "posit.mae").string();
+    {
+        OEMaestroWriter writer(path);
+        EXPECT_TRUE(writer.Write(mol));
+        writer.Close();
+    }
+
+    // Before the fix maeparser rejects the spaced key and Read throws.
+    MaestroReader reader(path);
+    MaestroMol read_mol;
+    ASSERT_TRUE(reader.Read(read_mol));
+    for (const auto& [k, v] : read_mol.ct_properties) {
+        EXPECT_EQ(k.find(' '), std::string::npos)
+            << "emitted property key contains whitespace: " << k;
+    }
+}
+
 TEST_F(OEMaestroWriterTest, WriteMultiConformer) {
     OEChem::OEMol mol;
     auto* c = mol.NewAtom(6);

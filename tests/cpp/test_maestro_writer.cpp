@@ -72,6 +72,82 @@ TEST_F(MaestroWriterTest, WriteAndReadBack) {
     EXPECT_EQ(read_mol.bonds[0].order, 2);
 }
 
+TEST_F(MaestroWriterTest, NormalizesReversedBondEndpoints) {
+    // Regression: the legacy MMCT m2io reader (structconvert, Maestro import)
+    // requires i_m_from < i_m_to. A MaestroBond whose atom1_index exceeds its
+    // atom2_index must still be emitted with from < to.
+    auto path = (tmp_dir_ / "revbond.mae").string();
+    MaestroMol mol;
+    mol.title = "revbond";
+
+    MaestroAtom a;
+    a.atomic_number = 6;
+    a.x = 0.0; a.y = 0.0; a.z = 0.0;
+    mol.atoms.push_back(a);
+
+    MaestroAtom b;
+    b.atomic_number = 6;
+    b.x = 1.5; b.y = 0.0; b.z = 0.0;
+    mol.atoms.push_back(b);
+
+    MaestroBond bond;
+    bond.atom1_index = 1;  // reversed: from-atom index > to-atom index
+    bond.atom2_index = 0;
+    bond.order = 1;
+    mol.bonds.push_back(bond);
+
+    {
+        MaestroWriter writer(path);
+        EXPECT_TRUE(writer.Write(mol));
+        writer.Close();
+    }
+
+    // MaestroReader copies the emitted i_m_from / i_m_to directly into
+    // atom1_index / atom2_index, so this asserts on the emitted ordering.
+    MaestroReader reader(path);
+    MaestroMol read_mol;
+    ASSERT_TRUE(reader.Read(read_mol));
+    ASSERT_EQ(read_mol.NumBonds(), 1u);
+    EXPECT_LT(read_mol.bonds[0].atom1_index, read_mol.bonds[0].atom2_index);
+}
+
+TEST_F(MaestroWriterTest, SanitizesWhitespaceInPropertyKeys) {
+    // Regression: Maestro/m2io property keys are whitespace-delimited tokens.
+    // A key containing a space (e.g. a POSIT SD tag "POSIT receptor filename")
+    // is rejected by both the legacy MMCT reader and by maeparser, so the
+    // writer must emit a whitespace-free key.
+    auto path = (tmp_dir_ / "spacedkey.mae").string();
+    MaestroMol mol;
+    mol.title = "spacedkey";
+
+    MaestroAtom a;
+    a.atomic_number = 6;
+    a.x = 0.0; a.y = 0.0; a.z = 0.0;
+    mol.atoms.push_back(a);
+
+    mol.ct_properties["s_user_POSIT receptor filename"] = "receptor.oedu";
+
+    {
+        MaestroWriter writer(path);
+        EXPECT_TRUE(writer.Write(mol));
+        writer.Close();
+    }
+
+    // Before the fix, the emitted key contains a space and maeparser rejects
+    // the block, so Read throws. After the fix the key is whitespace-free.
+    MaestroReader reader(path);
+    MaestroMol read_mol;
+    ASSERT_TRUE(reader.Read(read_mol));
+
+    bool found_value = false;
+    for (const auto& [k, v] : read_mol.ct_properties) {
+        EXPECT_EQ(k.find(' '), std::string::npos)
+            << "emitted property key contains whitespace: " << k;
+        if (v == "receptor.oedu") found_value = true;
+    }
+    EXPECT_TRUE(found_value) << "property value did not survive round-trip";
+}
+
 TEST_F(MaestroWriterTest, WriteMultiple) {
     auto path = (tmp_dir_ / "multi.mae").string();
     auto mol1 = make_simple_maestro_mol();

@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2]
+
+### Fixed
+
+- Bonds are now written with `i_m_from < i_m_to`. The writer previously copied
+  `OEBondBase::GetBgnIdx()` / `GetEndIdx()` into `i_m_from` / `i_m_to` without
+  ordering them, so any bond whose begin-atom index exceeded its end-atom index
+  (common for PDB/protein-derived molecules) produced a file the legacy MMCT
+  m2io reader (`structconvert`, Maestro import) rejected with
+  `ct_m2io_get_bonds(): Error setting bond style`. maeparser and the oemaestro
+  reader tolerated either ordering, so a pure oemaestro round-trip did not catch
+  it.
+- Maestro property keys are now sanitized to remove whitespace. SD-data tags
+  containing spaces (e.g. OpenEye POSIT's `POSIT receptor filename`) were
+  emitted verbatim as keys such as `s_user_POSIT receptor filename`; whitespace
+  is invalid inside a whitespace-delimited m2io key, so both MMCT and maeparser
+  aborted reading the CT. Whitespace in emitted CT- and atom-level keys is now
+  replaced with underscores.
+
 ## [0.8.1]
 
 ### Fixed
