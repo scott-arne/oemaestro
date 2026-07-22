@@ -431,7 +431,7 @@ OE_CROSS_RUNTIME_REF_TYPEMAPS(OEDocking::OEReceptor, _oemaestro_is_oereceptor, "
 // ============================================================================
 #define OEMAESTRO_VERSION_MAJOR 0
 #define OEMAESTRO_VERSION_MINOR 8
-#define OEMAESTRO_VERSION_PATCH 3
+#define OEMAESTRO_VERSION_PATCH 5
 
 // ============================================================================
 // Enums

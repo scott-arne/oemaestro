@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oemaestro"
-version = "0.8.3"
+version = "0.8.5"
 description = "Native Maestro format parser for OpenEye Toolkits"
 license = "MIT"
 license-files = ["LICENSE"]

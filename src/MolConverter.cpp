@@ -223,6 +223,48 @@ int OESSToMaestro(unsigned int oe_ss) {
     }
 }
 
+/// Maestro "Element" color-scheme color for an atom, as a 6-digit uppercase
+/// hex RGB string (e.g. "808080" for carbon).
+///
+/// Maestro renders atoms magenta when a structure carries no per-atom color.
+/// OpenEye molecules have no Maestro color, so every converted atom is given
+/// its element color via s_m_color_rgb. These values are Maestro's own
+/// Element-scheme colors, captured by round-tripping a structure containing one
+/// atom of every element (Z 1-118) through Maestro. Elements Maestro colors by
+/// group rather than uniquely (noble gases, alkali/alkaline-earth metals, the
+/// post-transition/metalloid block, the superheavy elements, ...) reproduce
+/// that shared color exactly. Atoms with no recognized element (e.g. dummy
+/// atoms, Z 0) fall back to a neutral gray so none is ever left color-less.
+const char* MaestroElementColorRGB(int atomic_number) {
+    // Indexed by atomic number; index 0 is the fallback color.
+    static const char* const kColors[] = {
+        "A0A0A0",  // 0  fallback (dummy / unknown)
+        "FFFFFF", "FF6BB5", "FF6B6B", "FF6BFF", "2EFF2E", "808080",  // 1-6: H He Li Be B C
+        "2E2EFF", "FF2E2E", "6BFFB5", "FF6BB5", "FF6B6B", "FF6BFF",  // 7-12: N O F Ne Na Mg
+        "FFCB2E", "FF962E", "CC0066", "FFFF6B", "008C00", "FF6BB5",  // 13-18: Al Si P S Cl Ar
+        "FF6B6B", "FF6BFF", "E6E6E6", "BFC2C7", "A6A6AB", "8A99C7",  // 19-24: K Ca Sc Ti V Cr
+        "9C7AC7", "E54D00", "4D33CC", "00CC66", "CC4D1A", "7D80B0",  // 25-30: Mn Fe Co Ni Cu Zn
+        "FFCB2E", "FFCB2E", "FF906B", "FF906B", "8C0000", "FF6BB5",  // 31-36: Ga Ge As Se Br Kr
+        "FF6B6B", "FF6BFF", "94FFFF", "94E0E0", "73C2C9", "54B5B5",  // 37-42: Rb Sr Y Zr Nb Mo
+        "3B9E9E", "248F8F", "0A7D8C", "006985", "C0C0C0", "FFD98F",  // 43-48: Tc Ru Rh Pd Ag Cd
+        "FFCB2E", "FFCB2E", "FFCB2E", "FF906B", "FF2EFF", "FF6BB5",  // 49-54: In Sn Sb Te I Xe
+        "FF6B6B", "FF6BFF", "70D4FF", "FFFFC7", "D9FFC7", "C7FFC7",  // 55-60: Cs Ba La Ce Pr Nd
+        "A3FFC7", "8FFFC7", "61FFC7", "45FFC7", "30FFC7", "1FFFC7",  // 61-66: Pm Sm Eu Gd Tb Dy
+        "00FF9C", "00E675", "00D452", "00BF38", "00AB24", "4DC2FF",  // 67-72: Ho Er Tm Yb Lu Hf
+        "4DA6FF", "2194D6", "267DAB", "266696", "175487", "D0D0E0",  // 73-78: Ta W Re Os Ir Pt
+        "FFD123", "B8B8D0", "FFCB2E", "FFCB2E", "FFCB2E", "FFCB2E",  // 79-84: Au Hg Tl Pb Bi Po
+        "FF906B", "FF6BB5", "FF6B6B", "FF6BFF", "70ABFA", "00BAFF",  // 85-90: At Rn Fr Ra Ac Th
+        "00A1FF", "008FFF", "0080FF", "006BFF", "545CF2", "785CE3",  // 91-96: Pa U Np Pu Am Cm
+        "8A4FE3", "A136D4", "B31FD4", "B31FBA", "B30DA6", "B30DA6",  // 97-102: Bk Cf Es Fm Md No
+        "C70066", "404040", "404040", "404040", "E11EE1", "E11EE1",  // 103-108: Lr Rf Db Sg Bh Hs
+        "E11EE1", "E11EE1", "E11EE1", "E11EE1", "E11EE1", "E11EE1",  // 109-114: Mt Ds Rg Cn Nh Fl
+        "E11EE1", "E11EE1", "E11EE1", "E11EE1",  // 115-118: Mc Lv Ts Og
+    };
+    if (atomic_number >= 1 && atomic_number <= 118)
+        return kColors[atomic_number];
+    return kColors[0];
+}
+
 /// Populate a MaestroMol from an OEMolBase.
 /// If conf_coords is not nullptr, use those coordinates instead of mol.GetCoords().
 void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
@@ -273,6 +315,10 @@ void PopulateMaestroMol(MaestroMol& dst, const OEChem::OEMolBase& src,
 
         if (ai->GetBoolData("is_ligand_atom"))
             matom.is_ligand_atom = true;
+
+        // Give every atom its Maestro Element-scheme color. Without a per-atom
+        // color, Maestro displays imported structures entirely in magenta.
+        matom.properties["s_m_color_rgb"] = MaestroElementColorRGB(matom.atomic_number);
 
         dst.atoms.push_back(std::move(matom));
     }

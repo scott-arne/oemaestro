@@ -404,3 +404,31 @@ TEST(MolConverterTest, WriteDirection_MultiConformer) {
     EXPECT_NEAR(mmols[1].atoms[1].x, 0.0, 1e-4);
     EXPECT_NEAR(mmols[1].atoms[1].y, 1.2, 1e-4);
 }
+
+TEST(MolConverterTest, WriteDirection_AssignsElementColors) {
+    // Maestro renders atoms magenta when a structure carries no per-atom color.
+    // OpenEye molecules have no Maestro color, so the converter must assign the
+    // Element-scheme color (s_m_color_rgb) to every atom. The values below match
+    // Maestro's own output for these elements.
+    OEChem::OEGraphMol mol;
+    mol.NewAtom(6);   // carbon
+    mol.NewAtom(8);   // oxygen
+    mol.NewAtom(7);   // nitrogen
+    mol.NewAtom(1);   // hydrogen
+    mol.NewAtom(15);  // phosphorus
+    mol.NewAtom(30);  // zinc
+    mol.NewAtom(2);   // helium (Maestro colors noble gases as a group)
+
+    MolConverter converter;
+    MaestroMol mmol;
+    converter.ConvertToMaestro(mmol, mol);
+
+    ASSERT_EQ(mmol.NumAtoms(), 7u);
+    EXPECT_EQ(mmol.atoms[0].properties.at("s_m_color_rgb"), "808080");  // C gray
+    EXPECT_EQ(mmol.atoms[1].properties.at("s_m_color_rgb"), "FF2E2E");  // O red
+    EXPECT_EQ(mmol.atoms[2].properties.at("s_m_color_rgb"), "2E2EFF");  // N blue
+    EXPECT_EQ(mmol.atoms[3].properties.at("s_m_color_rgb"), "FFFFFF");  // H white
+    EXPECT_EQ(mmol.atoms[4].properties.at("s_m_color_rgb"), "CC0066");  // P
+    EXPECT_EQ(mmol.atoms[5].properties.at("s_m_color_rgb"), "7D80B0");  // Zn
+    EXPECT_EQ(mmol.atoms[6].properties.at("s_m_color_rgb"), "FF6BB5");  // He (noble-gas group)
+}

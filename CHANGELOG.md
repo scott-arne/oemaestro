@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5]
+
+### Fixed
+
+- Atoms are now written with a per-atom display color (`s_m_color_rgb`).
+  OpenEye molecules carry no Maestro color, and a structure written without one
+  is rendered entirely in magenta/pink when opened in Maestro. The converter now
+  assigns each atom its Maestro "Element" color-scheme color. The values are
+  Maestro's own colors for every element (Z 1-118), captured by round-tripping a
+  one-atom-per-element structure through Maestro, including the shared colors
+  Maestro uses for grouped elements (noble gases, alkali/alkaline-earth metals,
+  the superheavy block, ...); unrecognized elements fall back to a neutral gray.
+  Written files now display with standard element coloring by default.
+
 ## [0.8.3]
 
 ### Fixed
