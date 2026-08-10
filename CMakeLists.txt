@@ -4,7 +4,7 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-project(oemaestro VERSION 0.8.5 LANGUAGES CXX)
+project(oemaestro VERSION 0.9.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -75,8 +75,8 @@ if(OEMAESTRO_BUILD_OEIO)
 
     FetchContent_Declare(
         oeio
-        GIT_REPOSITORY https://github.com/scott-arne/oeio.git
-        GIT_TAG master
+        GIT_REPOSITORY /Users/johnss51/Development/cpp/oeio  # local clone during oeviz SP0 development - v0.6.0 is not yet published; restore the GitHub URL when it is
+        GIT_TAG v0.6.0
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(oeio)

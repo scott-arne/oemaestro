@@ -7,6 +7,7 @@
 #include <oechem.h>
 
 #include "oemaestro/Enums.h"
+#include "oemaestro/ReadStatus.h"
 
 namespace OEMaestro {
 
@@ -60,6 +61,25 @@ public:
     /// :param mol: OEMolBase to populate.
     /// :returns: True if a molecule was read, false at EOF.
     bool Read(OEChem::OEMolBase& mol);
+
+    /// Reads the next molecule without throwing on a malformed CT block.
+    ///
+    /// Read() throws MaestroParseError on a bad block, which forces every caller
+    /// that wants to report the failure to wrap the call. TryRead reports the
+    /// same information as a value.
+    ///
+    /// :param mol: OEMol to populate. Untouched unless the status is Ok.
+    /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.
+    ReadResult TryRead(OEChem::OEMol& mol);
+
+    /// Non-conformer-grouping overload, matching Read(OEChem::OEMolBase&).
+    ///
+    /// :param mol: OEMolBase to populate. Untouched unless the status is Ok.
+    /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.
+    ReadResult TryRead(OEChem::OEMolBase& mol);
+
+    /// :returns: False, always. maeparser cannot resume after a failed CT block.
+    [[nodiscard]] bool CanResynchronize() const;
 
     /// Sets the conformer test for grouping CT blocks.
     ///

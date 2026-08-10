@@ -4,6 +4,7 @@
 #include "oemaestro/StreamAdapter.h"
 #include "oemaestro/Error.h"
 #include "oemaestro/BoundedQueue.h"
+#include "oemaestro/ReadStatus.h"
 #include <thread>
 #include <map>
 #include <variant>
@@ -254,6 +255,39 @@ OEMaestroReaderConfig OEMaestroReader::GetConfig() const {
     return OEMaestroReaderConfig(pimpl_->converter.GetTagFormat(),  // NOLINT(modernize-return-braced-init-list)
                                 pimpl_->converter.GetPerception(), pimpl_->num_threads_);
 }
+
+namespace {
+
+/// Runs one read and converts any escaping exception into a ReadResult.
+///
+/// Templated over the molecule type so both overloads share one body; the two
+/// Read() overloads differ only in conformer grouping.
+template <typename MolT, typename ReadFn>
+ReadResult TryReadImpl(MolT& mol, ReadFn&& read) {
+    try {
+        return read(mol) ? ReadResult{ReadStatus::Ok, {}, false}
+                         : ReadResult{ReadStatus::EndOfStream, {}, false};
+    } catch (const OEMaestroError& e) {
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    } catch (const std::exception& e) {
+        // maeparser and the OE conversion path can both surface exceptions that
+        // are not OEMaestroError. Reporting them as record errors is strictly
+        // better than letting them unwind through a C API boundary.
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    }
+}
+
+}  // namespace
+
+ReadResult OEMaestroReader::TryRead(OEChem::OEMol& mol) {
+    return TryReadImpl(mol, [this](OEChem::OEMol& m) { return Read(m); });
+}
+
+ReadResult OEMaestroReader::TryRead(OEChem::OEMolBase& mol) {
+    return TryReadImpl(mol, [this](OEChem::OEMolBase& m) { return Read(m); });
+}
+
+bool OEMaestroReader::CanResynchronize() const { return false; }
 
 OEMaestroReader::~OEMaestroReader() = default;
 OEMaestroReader::OEMaestroReader(OEMaestroReader&&) noexcept = default;

@@ -3,10 +3,12 @@
 
 #include <oeio/format_handler.h>
 #include <oeio/format_registry.h>
+#include <oeio/read_status.h>
 
 #include "oemaestro/OEMaestroReader.h"
 #include "oemaestro/OEMaestroWriter.h"
 #include "oemaestro/Enums.h"
+#include "oemaestro/ReadStatus.h"
 
 #include <oechem.h>
 #include <oesystem.h>
@@ -39,6 +41,22 @@ public:
     bool next(OEChem::OEMolBase& mol) override {
         mol.Clear();
         return reader_->Read(mol);
+    }
+
+    bool can_resynchronize() const override { return reader_->CanResynchronize(); }
+
+    oeio::ReadResult try_next(OEChem::OEMolBase& mol) override {
+        mol.Clear();
+        const OEMaestro::ReadResult result = reader_->TryRead(mol);
+        switch (result.status) {
+            case OEMaestro::ReadStatus::Ok:
+                return oeio::read_ok();
+            case OEMaestro::ReadStatus::EndOfStream:
+                return oeio::read_end();
+            case OEMaestro::ReadStatus::RecordError:
+                return oeio::read_error(result.message, result.resynchronized);
+        }
+        return oeio::read_end();
     }
 
 private:
