@@ -68,11 +68,17 @@ public:
     /// that wants to report the failure to wrap the call. TryRead reports the
     /// same information as a value.
     ///
+    /// Failures that are not std::exception propagate; TryRead converts parse
+    /// and I/O errors, not foreign throws.
+    ///
     /// :param mol: OEMol to populate. Untouched unless the status is Ok.
     /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.
     ReadResult TryRead(OEChem::OEMol& mol);
 
     /// Non-conformer-grouping overload, matching Read(OEChem::OEMolBase&).
+    ///
+    /// Failures that are not std::exception propagate; TryRead converts parse
+    /// and I/O errors, not foreign throws.
     ///
     /// :param mol: OEMolBase to populate. Untouched unless the status is Ok.
     /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.

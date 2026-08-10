@@ -17,6 +17,11 @@ enum class ReadStatus {
 /// This is oemaestro's own type rather than oeio::ReadResult because the core
 /// library builds with -DOEMAESTRO_BUILD_OEIO=OFF; only src/oeio_handler.cpp
 /// translates between the two.
+///
+/// On RecordError, the molecule is left untouched by TryRead (still contains
+/// the previous successful read, if any). At the oeio handler layer,
+/// try_next calls mol.Clear() before TryRead, so oeio consumers see a cleared
+/// mol on error.
 struct ReadResult {
     ReadStatus status = ReadStatus::EndOfStream;
 

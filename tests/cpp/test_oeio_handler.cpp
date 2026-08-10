@@ -184,6 +184,49 @@ TEST_F(OeioHandlerTest, ReadIntoOEMolBase) {
     EXPECT_EQ(count, 1);
 }
 
+TEST_F(OeioHandlerTest, TryNextReportsRecordErrorAndClearsMol) {
+    // Handler-layer contract: try_next calls mol.Clear() before TryRead, so on
+    // RecordError the mol is CLEARED (not left with the previous successful read).
+    auto* handler = oeio::FormatRegistry::instance().lookup("test.mae");
+    ASSERT_NE(handler, nullptr);
+    auto source = handler->make_reader(DATA_DIR + "/corrupt_second_ct.mae", std::any{});
+    ASSERT_NE(source, nullptr);
+
+    OEChem::OEGraphMol mol;
+
+    // First read succeeds: Ethanol
+    auto first = source->try_next(mol);
+    ASSERT_EQ(oeio::ReadStatus::Ok, first.status);
+    EXPECT_STREQ("Ethanol", mol.GetTitle());
+    EXPECT_EQ(3u, mol.NumAtoms());
+
+    // Second read fails: corrupt block. The mol should be CLEARED.
+    auto second = source->try_next(mol);
+    ASSERT_EQ(oeio::ReadStatus::RecordError, second.status);
+    EXPECT_FALSE(second.message.empty());
+    EXPECT_FALSE(second.resynchronized);
+    EXPECT_EQ(0u, mol.NumAtoms());  // Cleared by try_next before TryRead
+}
+
+TEST_F(OeioHandlerTest, TryNextBecomesTerminalAfterRecordError) {
+    // Terminal-state contract at the handler layer: after RecordError with
+    // resynchronized=false, subsequent try_next returns EndOfStream.
+    auto* handler = oeio::FormatRegistry::instance().lookup("test.mae");
+    ASSERT_NE(handler, nullptr);
+    auto source = handler->make_reader(DATA_DIR + "/corrupt_second_ct.mae", std::any{});
+    ASSERT_NE(source, nullptr);
+
+    OEChem::OEGraphMol mol;
+
+    ASSERT_EQ(oeio::ReadStatus::Ok, source->try_next(mol).status);
+
+    const auto second = source->try_next(mol);
+    ASSERT_EQ(oeio::ReadStatus::RecordError, second.status);
+
+    // Third call returns EndOfStream (stream is terminal).
+    EXPECT_EQ(oeio::ReadStatus::EndOfStream, source->try_next(mol).status);
+}
+
 }  // namespace
 
 #endif  // OEMAESTRO_HAS_OEIO

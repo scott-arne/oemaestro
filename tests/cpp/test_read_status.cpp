@@ -66,6 +66,9 @@ TEST(ReadStatus, AfterRecordErrorStreamBecomesTerminal) {
     // Terminal-state contract: after RecordError with resynchronized=false,
     // the stream transitions to terminal. Subsequent calls return EndOfStream,
     // preventing retry loops on an unrecoverable error.
+    //
+    // The terminal state is enforced by an explicit failed_ latch (set on
+    // RecordError, checked at entry), making the contract maeparser-independent.
     OEMaestro::OEMaestroReader reader(DATA_DIR + "/corrupt_second_ct.mae");
     OEChem::OEMol mol;
 
@@ -76,6 +79,7 @@ TEST(ReadStatus, AfterRecordErrorStreamBecomesTerminal) {
     EXPECT_FALSE(second.resynchronized);
 
     // After RecordError, the stream becomes terminal and returns EndOfStream.
+    // The latch ensures this holds regardless of maeparser's internal behavior.
     EXPECT_EQ(OEMaestro::ReadStatus::EndOfStream, reader.TryRead(mol).status);
 }
 
