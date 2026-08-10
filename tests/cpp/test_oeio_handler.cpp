@@ -227,6 +227,28 @@ TEST_F(OeioHandlerTest, TryNextBecomesTerminalAfterRecordError) {
     EXPECT_EQ(oeio::ReadStatus::EndOfStream, source->try_next(mol).status);
 }
 
+TEST_F(OeioHandlerTest, ConversionErrorClearedMolContract) {
+    // Handler-layer contract: when TryRead hits a MolConverter exception
+    // (e.g. invalid bond index), the handler's mol.Clear() at entry survives
+    // because TryRead stages internally and never touches the caller's mol
+    // on failure.
+    auto* handler = oeio::FormatRegistry::instance().lookup("test.mae");
+    ASSERT_NE(handler, nullptr);
+    auto source = handler->make_reader(DATA_DIR + "/invalid_bond_index.mae", std::any{});
+    ASSERT_NE(source, nullptr);
+
+    OEChem::OEGraphMol mol;
+
+    ASSERT_EQ(oeio::ReadStatus::Ok, source->try_next(mol).status);
+
+    const auto second = source->try_next(mol);
+    ASSERT_EQ(oeio::ReadStatus::RecordError, second.status);
+
+    // The handler clears the mol before TryRead, and TryRead doesn't touch it
+    // on failure, so the mol is empty (not partial state from the failed conversion).
+    EXPECT_EQ(0u, mol.NumAtoms());
+}
+
 }  // namespace
 
 #endif  // OEMAESTRO_HAS_OEIO

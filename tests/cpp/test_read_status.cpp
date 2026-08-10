@@ -103,3 +103,82 @@ TEST(ReadStatus, RecordErrorLeavesMolUntouched) {
     EXPECT_STREQ("Ethanol", mol.GetTitle());
     EXPECT_EQ(first_atoms, mol.NumAtoms());
 }
+
+TEST(ReadStatus, InvalidBondIndexFixtureThrowsWithRead) {
+    // Verify the fixture: Read() should throw MaestroConvertError on the
+    // second CT (bond referencing atom index 5 when only 2 atoms exist).
+    // Also documents that Read() DOES contaminate the mol (unlike TryRead).
+    OEMaestro::OEMaestroReader reader(DATA_DIR + "/invalid_bond_index.mae");
+    OEChem::OEGraphMol mol;
+
+    ASSERT_TRUE(reader.Read(static_cast<OEChem::OEMolBase&>(mol)));
+    EXPECT_STREQ("Ethanol", mol.GetTitle());
+    EXPECT_EQ(3u, mol.NumAtoms());
+
+    // The throwing Read() path contaminates the mol (ConvertToOE clears and
+    // partially populates before throwing).
+    EXPECT_THROW(reader.Read(static_cast<OEChem::OEMolBase&>(mol)), OEMaestro::MaestroConvertError);
+}
+
+TEST(ReadStatus, ConversionErrorLeavesMolUntouched) {
+    // Contract: when MolConverter throws (e.g. invalid bond index), the mol
+    // is left untouched by TryRead. The fixture has a second CT that parses
+    // successfully but declares a bond referencing atom index 5 when only 2
+    // atoms exist, triggering MaestroConvertError after atoms are added.
+    // With staging, TryRead catches the exception and leaves the caller's mol
+    // untouched (still contains "Ethanol" from the first read).
+    OEMaestro::OEMaestroReader reader(DATA_DIR + "/invalid_bond_index.mae");
+    OEChem::OEMol mol;
+
+    const auto first = reader.TryRead(mol);
+    ASSERT_EQ(OEMaestro::ReadStatus::Ok, first.status);
+    EXPECT_STREQ("Ethanol", mol.GetTitle());
+    EXPECT_EQ(3u, mol.NumAtoms());
+
+    const auto second = reader.TryRead(mol);
+    ASSERT_EQ(OEMaestro::ReadStatus::RecordError, second.status);
+    EXPECT_FALSE(second.message.empty());
+
+    // Mol should still contain "Ethanol" from the first read (untouched by TryRead).
+    EXPECT_STREQ("Ethanol", mol.GetTitle());
+    EXPECT_EQ(3u, mol.NumAtoms());
+}
+
+TEST(ReadStatus, ConversionErrorLeavesMolBaseUntouched) {
+    // Contract: when MolConverter throws, the OEMolBase is left untouched.
+    // This test uses ONLY TryRead(OEMolBase&) which calls Read(OEMolBase&) that
+    // converts directly into the caller's mol WITHOUT staging (line 240 of
+    // OEMaestroReader.cpp). Without explicit staging in TryRead, this test
+    // FAILS with partial state contamination (title="InvalidBond", 2 atoms).
+    //
+    // Use TWO SEPARATE readers to avoid the failed_ latch preventing the
+    // second read entirely.
+    {
+        OEMaestro::OEMaestroReader reader1(DATA_DIR + "/invalid_bond_index.mae");
+        OEChem::OEGraphMol mol;
+        const auto first = reader1.TryRead(static_cast<OEChem::OEMolBase&>(mol));
+        ASSERT_EQ(OEMaestro::ReadStatus::Ok, first.status);
+        EXPECT_STREQ("Ethanol", mol.GetTitle());
+        EXPECT_EQ(3u, mol.NumAtoms());
+    }
+
+    {
+        OEMaestro::OEMaestroReader reader2(DATA_DIR + "/invalid_bond_index.mae");
+        OEChem::OEGraphMol mol;
+
+        // Read first CT (Ethanol) successfully
+        auto first = reader2.TryRead(static_cast<OEChem::OEMolBase&>(mol));
+        ASSERT_EQ(OEMaestro::ReadStatus::Ok, first.status);
+        EXPECT_STREQ("Ethanol", mol.GetTitle());
+        EXPECT_EQ(3u, mol.NumAtoms());
+
+        // Try to read second CT (InvalidBond) - should fail with conversion error
+        const auto second = reader2.TryRead(static_cast<OEChem::OEMolBase&>(mol));
+        ASSERT_EQ(OEMaestro::ReadStatus::RecordError, second.status);
+        EXPECT_FALSE(second.message.empty());
+
+        // With staging: mol still contains "Ethanol" from the first read (untouched).
+        EXPECT_STREQ("Ethanol", mol.GetTitle());
+        EXPECT_EQ(3u, mol.NumAtoms());
+    }
+}

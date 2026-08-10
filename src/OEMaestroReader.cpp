@@ -295,11 +295,49 @@ ReadResult TryReadImpl(bool& failed, MolT& mol, ReadFn&& read) {
 }  // namespace
 
 ReadResult OEMaestroReader::TryRead(OEChem::OEMol& mol) {
-    return TryReadImpl(pimpl_->failed_, mol, [this](OEChem::OEMol& m) { return Read(m); });
+    // Stage through a local temporary so that failure never contaminates the
+    // caller's mol. Cost: one molecule copy per successful read, paid for
+    // correctness (imports are per-record and I/O-bound, so correctness wins).
+    if (pimpl_->failed_) {
+        return ReadResult{ReadStatus::EndOfStream, {}, false};
+    }
+    OEChem::OEMol temp;
+    try {
+        if (Read(temp)) {
+            mol = temp;
+            return ReadResult{ReadStatus::Ok, {}, false};
+        }
+        return ReadResult{ReadStatus::EndOfStream, {}, false};
+    } catch (const OEMaestroError& e) {
+        pimpl_->failed_ = true;
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    } catch (const std::exception& e) {
+        pimpl_->failed_ = true;
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    }
 }
 
 ReadResult OEMaestroReader::TryRead(OEChem::OEMolBase& mol) {
-    return TryReadImpl(pimpl_->failed_, mol, [this](OEChem::OEMolBase& m) { return Read(m); });
+    // Stage through a concrete local (OEGraphMol is an OEMolBase) to preserve
+    // the overload's semantics (no conformer grouping). On success, assign via
+    // base-level assignment. Cost: one molecule copy per successful read.
+    if (pimpl_->failed_) {
+        return ReadResult{ReadStatus::EndOfStream, {}, false};
+    }
+    OEChem::OEGraphMol temp;
+    try {
+        if (Read(static_cast<OEChem::OEMolBase&>(temp))) {
+            mol = temp;
+            return ReadResult{ReadStatus::Ok, {}, false};
+        }
+        return ReadResult{ReadStatus::EndOfStream, {}, false};
+    } catch (const OEMaestroError& e) {
+        pimpl_->failed_ = true;
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    } catch (const std::exception& e) {
+        pimpl_->failed_ = true;
+        return ReadResult{ReadStatus::RecordError, e.what(), false};
+    }
 }
 
 bool OEMaestroReader::CanResynchronize() const { return false; }
