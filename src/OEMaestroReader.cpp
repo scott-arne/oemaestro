@@ -262,37 +262,6 @@ OEMaestroReaderConfig OEMaestroReader::GetConfig() const {
                                 pimpl_->converter.GetPerception(), pimpl_->num_threads_);
 }
 
-namespace {
-
-/// Runs one read and converts any escaping exception into a ReadResult.
-///
-/// Templated over the molecule type so both overloads share one body; the two
-/// Read() overloads differ only in conformer grouping.
-///
-/// The failed flag is checked at entry (returning EndOfStream immediately if
-/// set) and set on RecordError, making the terminal-state contract
-/// self-enforcing rather than relying on maeparser internals.
-template <typename MolT, typename ReadFn>
-ReadResult TryReadImpl(bool& failed, MolT& mol, ReadFn&& read) {
-    if (failed) {
-        return ReadResult{ReadStatus::EndOfStream, {}, false};
-    }
-    try {
-        return read(mol) ? ReadResult{ReadStatus::Ok, {}, false}
-                         : ReadResult{ReadStatus::EndOfStream, {}, false};
-    } catch (const OEMaestroError& e) {
-        failed = true;
-        return ReadResult{ReadStatus::RecordError, e.what(), false};
-    } catch (const std::exception& e) {
-        // maeparser and the OE conversion path can both surface exceptions that
-        // are not OEMaestroError. Reporting them as record errors is strictly
-        // better than letting them unwind through a C API boundary.
-        failed = true;
-        return ReadResult{ReadStatus::RecordError, e.what(), false};
-    }
-}
-
-}  // namespace
 
 ReadResult OEMaestroReader::TryRead(OEChem::OEMol& mol) {
     // Stage through a local temporary so that failure never contaminates the
