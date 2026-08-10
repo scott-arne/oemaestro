@@ -298,16 +298,22 @@ ReadResult OEMaestroReader::TryRead(OEChem::OEMol& mol) {
     // Stage through a local temporary so that failure never contaminates the
     // caller's mol. Cost: one molecule copy per successful read, paid for
     // correctness (imports are per-record and I/O-bound, so correctness wins).
+    //
+    // The try/catch covers ONLY Read(temp), not the final mol=temp commit.
+    // If the destination copy throws (allocation failure, a throwing copy path),
+    // that exception propagates — consistent with the documented contract
+    // ("TryRead converts parse and I/O errors, not foreign throws"). The record
+    // was already consumed from the stream, so it is lost, but the stream itself
+    // remains readable (failed_ is NOT set, so no false terminal state).
+    // The caller's molecule state after a copy failure is defined by OEChem's
+    // assignment semantics, not by TryRead.
     if (pimpl_->failed_) {
         return ReadResult{ReadStatus::EndOfStream, {}, false};
     }
     OEChem::OEMol temp;
+    bool ok = false;
     try {
-        if (Read(temp)) {
-            mol = temp;
-            return ReadResult{ReadStatus::Ok, {}, false};
-        }
-        return ReadResult{ReadStatus::EndOfStream, {}, false};
+        ok = Read(temp);
     } catch (const OEMaestroError& e) {
         pimpl_->failed_ = true;
         return ReadResult{ReadStatus::RecordError, e.what(), false};
@@ -315,22 +321,32 @@ ReadResult OEMaestroReader::TryRead(OEChem::OEMol& mol) {
         pimpl_->failed_ = true;
         return ReadResult{ReadStatus::RecordError, e.what(), false};
     }
+    // Commit the staged read AFTER the catch block so a copy failure cannot
+    // masquerade as a record problem (it propagates; failed_ stays false).
+    if (ok) {
+        mol = temp;
+        return ReadResult{ReadStatus::Ok, {}, false};
+    }
+    return ReadResult{ReadStatus::EndOfStream, {}, false};
 }
 
 ReadResult OEMaestroReader::TryRead(OEChem::OEMolBase& mol) {
     // Stage through a concrete local (OEGraphMol is an OEMolBase) to preserve
     // the overload's semantics (no conformer grouping). On success, assign via
     // base-level assignment. Cost: one molecule copy per successful read.
+    //
+    // The try/catch covers ONLY Read(temp), not the final mol=temp commit.
+    // If the destination copy throws, that exception propagates (the record
+    // was consumed but lost; the stream remains readable, failed_ stays false).
+    // The caller's molecule state after a copy failure is defined by OEChem's
+    // OEMolBase::operator= semantics, not by TryRead.
     if (pimpl_->failed_) {
         return ReadResult{ReadStatus::EndOfStream, {}, false};
     }
     OEChem::OEGraphMol temp;
+    bool ok = false;
     try {
-        if (Read(static_cast<OEChem::OEMolBase&>(temp))) {
-            mol = temp;
-            return ReadResult{ReadStatus::Ok, {}, false};
-        }
-        return ReadResult{ReadStatus::EndOfStream, {}, false};
+        ok = Read(static_cast<OEChem::OEMolBase&>(temp));
     } catch (const OEMaestroError& e) {
         pimpl_->failed_ = true;
         return ReadResult{ReadStatus::RecordError, e.what(), false};
@@ -338,6 +354,13 @@ ReadResult OEMaestroReader::TryRead(OEChem::OEMolBase& mol) {
         pimpl_->failed_ = true;
         return ReadResult{ReadStatus::RecordError, e.what(), false};
     }
+    // Commit the staged read AFTER the catch block so a copy failure cannot
+    // masquerade as a record problem (it propagates; failed_ stays false).
+    if (ok) {
+        mol = temp;
+        return ReadResult{ReadStatus::Ok, {}, false};
+    }
+    return ReadResult{ReadStatus::EndOfStream, {}, false};
 }
 
 bool OEMaestroReader::CanResynchronize() const { return false; }

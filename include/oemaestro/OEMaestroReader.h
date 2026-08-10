@@ -69,7 +69,10 @@ public:
     /// same information as a value.
     ///
     /// Failures that are not std::exception propagate; TryRead converts parse
-    /// and I/O errors, not foreign throws.
+    /// and I/O errors, not foreign throws. If the final copy into the caller's
+    /// molecule throws (allocation failure, a throwing copy path), that exception
+    /// propagates; the record was already consumed from the stream, so it is lost,
+    /// but the stream itself remains readable.
     ///
     /// :param mol: OEMol to populate. Untouched unless the status is Ok.
     /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.
@@ -78,7 +81,9 @@ public:
     /// Non-conformer-grouping overload, matching Read(OEChem::OEMolBase&).
     ///
     /// Failures that are not std::exception propagate; TryRead converts parse
-    /// and I/O errors, not foreign throws.
+    /// and I/O errors, not foreign throws. If the final copy into the caller's
+    /// molecule throws, that exception propagates; the record was consumed but lost,
+    /// and the stream remains readable.
     ///
     /// :param mol: OEMolBase to populate. Untouched unless the status is Ok.
     /// :returns: Ok, EndOfStream, or RecordError with a diagnostic.
