@@ -8,7 +8,7 @@
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "OPENEYE_ROOT": "/Users/johnss51/Support/openeye/lib/openeye/toolkits/2025.2.3/macOS-13.7-clang++15-universal",
+                "OPENEYE_ROOT": "/Users/johnss51/Support/openeye/lib/openeye/toolkits/2026.1.0/macOS-14-clang++16-universal",
                 "Python3_EXECUTABLE": "/Users/johnss51/Applications/micromamba/envs/main/bin/python",
                 "OPENEYE_USE_SHARED": "ON"
             }
@@ -19,7 +19,7 @@
             "binaryDir": "${sourceDir}/build-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "OPENEYE_ROOT": "/Users/johnss51/Support/openeye/lib/openeye/toolkits/2025.2.3/macOS-13.7-clang++15-universal",
+                "OPENEYE_ROOT": "/Users/johnss51/Support/openeye/lib/openeye/toolkits/2026.1.0/macOS-14-clang++16-universal",
                 "Python3_EXECUTABLE": "/Users/johnss51/Applications/micromamba/envs/main/bin/python",
                 "OPENEYE_USE_SHARED": "ON"
             }

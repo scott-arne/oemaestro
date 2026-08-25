@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "oemaestro"
 version = "0.9.0"
 description = "Native Maestro format parser for OpenEye Toolkits"
-requires-python = ">=3.10"
-dependencies = ["openeye-toolkits>=2025.2", "rich-click>=1.7"]
+requires-python = ">=3.11"
+dependencies = ["openeye-toolkits>=2026.1", "rich-click>=1.7"]
 
 [project.scripts]
 oemaestro = "oemaestro.cli:main"

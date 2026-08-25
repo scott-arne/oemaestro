@@ -17,13 +17,17 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.10"
-dependencies = ["openeye-toolkits>=2025.2", "rich-click>=1.7", "oeio>=0.1.0"]
+# The floor is set by openeye-toolkits, not by anything in this package: 2026.1
+# is the first release with py314 wheels and the first to drop py310, and the
+# extension links its OpenEye shared libraries by versioned soname, so the
+# runtime toolkit has to be the one the wheel was built against.
+requires-python = ">=3.11"
+dependencies = ["openeye-toolkits>=2026.1", "rich-click>=1.7", "oeio>=0.1.0"]
 
 [project.scripts]
 oemaestro = "oemaestro.cli:main"
