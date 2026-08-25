@@ -75,7 +75,7 @@ if(OEMAESTRO_BUILD_OEIO)
 
     FetchContent_Declare(
         oeio
-        GIT_REPOSITORY /Users/johnss51/Development/cpp/oeio  # local clone during oeviz SP0 development - v0.6.0 is not yet published; restore the GitHub URL when it is
+        GIT_REPOSITORY https://github.com/scott-arne/oeio.git
         GIT_TAG v0.6.0
         GIT_SHALLOW TRUE
     )

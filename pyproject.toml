@@ -27,7 +27,10 @@ classifiers = [
 # extension links its OpenEye shared libraries by versioned soname, so the
 # runtime toolkit has to be the one the wheel was built against.
 requires-python = ">=3.11"
-dependencies = ["openeye-toolkits>=2026.1", "rich-click>=1.7", "oeio>=0.1.0"]
+# The oeio floor tracks the CMake pin below: the extension is built against
+# oeio v0.6.0's status-returning read API, so an older runtime oeio would not
+# match the plugin this wheel registers.
+dependencies = ["openeye-toolkits>=2026.1", "rich-click>=1.7", "oeio>=0.6.0"]
 
 [project.scripts]
 oemaestro = "oemaestro.cli:main"
