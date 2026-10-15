@@ -328,3 +328,6 @@ issues/
 # the same SWIG version as the compiled extension, so tracking it only
 # produces churn.
 python/oemaestro/oemaestro.py
+
+# User CMake presets (may contain local paths)
+CMakeUserPresets.json
