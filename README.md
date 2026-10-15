@@ -35,13 +35,40 @@ pip install oemaestro
 
 ### Building from Source
 
-Building from source requires CMake 3.21+, SWIG 4.0+, and the OpenEye C++ Toolkits. You can build
-everything including the Python package using:
+Building from source requires CMake 3.21+, SWIG 4.4.1 or newer, and the OpenEye C++ Toolkits.
+CI builds with SWIG 4.5.1 (`pip install swig==4.5.1`). SWIG 4.4.0, which Ubuntu 26.04 ships as
+`/usr/bin/swig`, generates stable-ABI wrappers that do not compile against Python 3.13 or newer.
+
+On Linux, install `patchelf` as well, so editable builds can add the OpenEye library directories
+to the extension's RPATH; without it the editable import fails with
+`cannot open shared object file`.
+
+You can build everything including the Python package using:
 
 ```bash
 python scripts/build_python.py            \
     --openeye-root /path/to/openeye/cpp/  \
     --python /path/to/python3
+```
+
+The tracked CMake presets carry no machine paths. Set `OPENEYE_ROOT` in the
+environment, or create a `CMakeUserPresets.json` (gitignored) that inherits a
+tracked preset:
+
+```json
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "local",
+            "inherits": "debug",
+            "cacheVariables": {
+                "OPENEYE_ROOT": "/path/to/openeye/toolkits",
+                "Python3_EXECUTABLE": "/path/to/python"
+            }
+        }
+    ]
+}
 ```
 
 ## Quick Start
