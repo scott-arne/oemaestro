@@ -84,7 +84,26 @@ endif()
 
 if(OEMAESTRO_BUILD_PYTHON)
     find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-    find_package(SWIG 4.0)
+    # SWIG 4.4.0 picks Python 3.13-only C API calls from the header version
+    # instead of Py_LIMITED_API, so its stable-ABI wrapper does not compile
+    # against Python 3.13+ headers. 4.4.1 fixed it (swig/swig#3283).
+    if(OEMAESTRO_USE_STABLE_ABI)
+        find_package(SWIG 4.4.1)
+    else()
+        find_package(SWIG 4.0)
+    endif()
+    # The bindings below are skipped when SWIG is missing, and wheel builds
+    # force OEMAESTRO_BUILD_PYTHON ON, so a too-old SWIG would otherwise produce a
+    # wheel with no extension. Fail here instead, as oemmpa does.
+    if(NOT SWIG_FOUND)
+        message(FATAL_ERROR
+            "OEMAESTRO_BUILD_PYTHON is ON but no suitable SWIG was found "
+            "(the stable-ABI build needs 4.4.1 or newer; SWIG 4.4.0, which "
+            "Ubuntu 26.04 ships, is too old). Install a newer SWIG (pip install "
+            "swig==4.5.1) and pass -DSWIG_EXECUTABLE=<path>, deleting "
+            "CMakeCache.txt first if an older SWIG is cached, or configure "
+            "with -DOEMAESTRO_BUILD_PYTHON=OFF for a C++-only build.")
+    endif()
 endif()
 
 if(OPENEYE_USE_SHARED)
