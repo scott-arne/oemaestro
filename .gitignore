@@ -323,3 +323,11 @@ python/oemaestro/_build_info.py
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 issues/
+
+# SWIG-generated proxy module. Every build rewrites it, and it must come from
+# the same SWIG version as the compiled extension, so tracking it only
+# produces churn.
+python/oemaestro/oemaestro.py
+
+# User CMake presets (may contain local paths)
+CMakeUserPresets.json
